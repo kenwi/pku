@@ -14,9 +14,11 @@
 
 #define BUFF_SIZE 1024
 
+int sample_info = 0;
 static unsigned short port = 8080;
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
+FILE *file;
 
 #pragma pack(1)
 typedef struct {
@@ -51,7 +53,12 @@ typedef struct {
 void usage()
 {
     printf("pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.\n\n"
-                   "Usage:\tpku [-c connection (default:ip)] [host]\n");
+           "Usage:\tpku [-options] filename\n"
+            "\t[-c connects with default settings]\n"
+            "\t[-i only print sample info]\n"
+            "\t[-t test casting]\n"
+            "\tfilename (default: '-' dumps samples to stdout)\n"
+    );
     exit(1);
 }
 
@@ -68,7 +75,10 @@ void *receiver(void *sfd)
             continue;
 
         pthread_mutex_lock(&console_cv_lock);
-        printf("Received length: %i, hex: %s, status: %s\n", readlen, buffer, readlen == 52 ? "OK" : "BAD");
+
+        if(sample_info)
+            fprintf(file, "Sample received. length: %i bytes, hex: %s, status: %s\n", (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+
         pthread_cond_signal(&console_cv);
         pthread_mutex_unlock(&console_cv_lock);
     }
@@ -104,6 +114,7 @@ void connect_pk1000() {
     serv_addr.sin_port = htons(port);
     serv_addr.sin_addr.s_addr = inet_addr("192.168.0.19");
 
+    printf("Connecting to PK-1000 system by IP-address 192.168.0.19\n");
     connect(sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
     pthread_create(&receiver_thread, NULL, receiver, (void*)&sockfd);
     console(sockfd);
@@ -134,6 +145,50 @@ void test_casting() {
 
 int main(int argc, char **argv)
 {
-    connect_pk1000();
+    char *filename = NULL;
+    int connect_to_pk1000 = 0;
+
+    int opt;
+    while((opt = getopt(argc, argv, "cith")) != -1) {
+        switch(opt) {
+            case 'c':
+                connect_to_pk1000  = 1;
+                break;
+
+            case 'i':
+                sample_info = 1;
+                break;
+
+            case 't':
+                test_casting();
+                exit(EXIT_SUCCESS);
+
+            case 'h':
+            default:
+                usage();
+                break;
+        }
+    }
+    if(argc == 1)
+        usage();
+
+    filename = argc <= optind ? "-" : argv[optind];
+    if(strcmp(filename, "-") == 0) {
+        file = stdout;
+    } else {
+        file = fopen(filename, "wb");
+        if(!file) {
+            fprintf(stderr, "Failed to open %s\n", filename);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if(connect_to_pk1000)
+        connect_pk1000();
+
+    /* cleanup */
+    if(file != stdout)
+        fclose(file);
+
     return 0;
 }
