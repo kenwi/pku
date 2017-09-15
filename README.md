@@ -1,13 +1,13 @@
 # pku
-pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
+PK-1000 Unwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
 
-## Requirements 
+### Requirements 
 pku needs libpthreads to compile
 ```bash
 sudo apt install libpthread-stubs0-dev
 ```
 
-## Installation
+### Installation
 No magic
 ```bash
 git clone https://github.com/kenwi/pku
@@ -18,7 +18,7 @@ cmake ../
 make
 ```
 
-## Help
+### Help
 ```bash
 kenwi@wardenclyffe:~/git/pku/build$ ./pku
 pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
@@ -32,7 +32,7 @@ Usage:	pku [-options] filename
 	filename (default: '-' dumps samples to stdout)
 ```
 
-## Connect with default settings, print status of samples
+### Connect with default settings, print status of samples
 ```bash
 kenwi@wardenclyffe:~/git/pku/build$ ./pku -c -i
 Connecting to PK-1000 system by IP-address 192.168.0.19
@@ -48,7 +48,7 @@ Sample received. length: 52 bytes, hex: 78, status: OK
 Sample received. length: 52 bytes, hex: 78, status: OK
 ```
 
-## Internal testing of casting
+### Internal testing of casting
 ```bash
 kenwi@wardenclyffe:~/git/pku/build$ ./pku -t
 pk1000 size = 52
