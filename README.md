@@ -28,6 +28,7 @@ Usage:	pku [-options] filename
 	[-c connects with default settings]
 	[-i only print sample info]
 	[-t test casting]
+	[-p port (default: 8080)]
 	filename (default: '-' dumps samples to stdout)
 ```
 
