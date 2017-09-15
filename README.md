@@ -27,6 +27,7 @@ Usage:	pku [-options] filename
 	[-c connects with default settings]
 	[-i only print sample info]
 	[-t test casting]
+	[-h host (default: 192.168.0.19)]
 	[-p port (default: 8080)]
 	filename (default: '-' dumps samples to stdout)
 ```
