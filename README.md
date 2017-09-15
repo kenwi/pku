@@ -3,8 +3,7 @@ pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
 
 ## Requirements 
 pku needs libpthreads to compile
-```
-bash
+```bash
 sudo apt install libpthread-stubs0-dev
 ```
 
