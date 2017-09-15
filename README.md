@@ -1,7 +1,7 @@
 # PK-1000 Unwrap
 pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
 
-[logo]: https://github.com/kenwi/pku/blob/master/pk1000.jpg
+![](https://github.com/kenwi/pku/blob/master/pk1000.jpg)
 
 ### Requirements 
 pku needs libpthreads to compile
