@@ -9,10 +9,10 @@
 #include <getopt.h>
 
 #define BUFF_SIZE 1024
-#define DEFAULT_HOST "192.168.0.19"
 
 int sample_info = 0;
 static unsigned short port = 8080;
+char *host = "192.168.0.19";
 
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
@@ -53,10 +53,11 @@ void usage()
             "\t[-c connects with default settings]\n"
             "\t[-i only print sample info]\n"
             "\t[-t test casting]\n"
+            "\t[-h host (default: 192.168.0.19)]\n"
             "\t[-p port (default: 8080)]\n"
             "\tfilename (default: '-' dumps samples to stdout)\n"
     );
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 void *receiver(void *sfd)
@@ -109,9 +110,9 @@ void connect_pk1000() {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
-    serv_addr.sin_addr.s_addr = inet_addr(DEFAULT_HOST);
+    serv_addr.sin_addr.s_addr = inet_addr(host);
 
-    printf("Connecting to PK-1000 system by IP-address %s\n", DEFAULT_HOST);
+    printf("Connecting to PK-1000 system host: %s\n", host);
     connect(sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
     pthread_create(&receiver_thread, NULL, receiver, (void*)&sockfd);
     console(sockfd);
@@ -146,27 +147,31 @@ int main(int argc, char **argv)
     int connect_to_pk1000 = 0;
 
     int opt;
-    while((opt = getopt(argc, argv, "cithp:")) != -1) {
+    while((opt = getopt(argc, argv, "cith:p:")) != -1) {
         switch(opt) {
             case 'c':
                 connect_to_pk1000  = 1;
                 break;
 
             case 'p':
-                printf("Setting changed, port to connect to: %i\n", port);
                 port = atoi(optarg);
+                printf("Setting changed, port: %i\n", port);
                 break;
 
             case 'i':
-                printf("Setting changed, only print sample info\n");
                 sample_info = 1;
+                printf("Setting changed, sample_info: %i\n", sample_info);
                 break;
 
             case 't':
+                printf("Internal testing of casting\n");
                 test_casting();
                 exit(EXIT_SUCCESS);
 
             case 'h':
+                host = strdup(optarg);
+                printf("Setting changed, host: %s\n", host);
+                break;
             default:
                 usage();
                 break;
