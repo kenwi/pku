@@ -1,12 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <string.h>
 #include <unistd.h>
-
-#include <sys/types.h>
 #include <sys/socket.h>
-
 #include <netinet/in.h>
 #include <pthread.h>
 #include <arpa/inet.h>
@@ -43,13 +39,11 @@ typedef struct {
     uint16_t frame_footer;
 } pk1000_t, *ppk1000_t;
 
-
 typedef struct {
     uint16_t frame_header;
 
     uint16_t frame_footer;
 } pk1000_setup_t;
-
 
 void usage()
 {
