@@ -1,5 +1,5 @@
-# pku
-PK-1000 Unwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
+# PK-1000 Unwrap
+pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
 
 ### Requirements 
 pku needs libpthreads to compile
