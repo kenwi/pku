@@ -13,6 +13,7 @@
 
 int sample_info = 0;
 static unsigned short port = 8080;
+
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
 FILE *file;
@@ -52,6 +53,7 @@ void usage()
             "\t[-c connects with default settings]\n"
             "\t[-i only print sample info]\n"
             "\t[-t test casting]\n"
+            "\t[-p port (default: 8080)]\n"
             "\tfilename (default: '-' dumps samples to stdout)\n"
     );
     exit(1);
@@ -144,13 +146,19 @@ int main(int argc, char **argv)
     int connect_to_pk1000 = 0;
 
     int opt;
-    while((opt = getopt(argc, argv, "cith")) != -1) {
+    while((opt = getopt(argc, argv, "cithp:")) != -1) {
         switch(opt) {
             case 'c':
                 connect_to_pk1000  = 1;
                 break;
 
+            case 'p':
+                printf("Setting changed, port to connect to: %i\n", port);
+                port = atoi(optarg);
+                break;
+
             case 'i':
+                printf("Setting changed, only print sample info\n");
                 sample_info = 1;
                 break;
 
