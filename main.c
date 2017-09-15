@@ -13,6 +13,7 @@
 #include <getopt.h>
 
 #define BUFF_SIZE 1024
+#define DEFAULT_HOST "192.168.0.19"
 
 int sample_info = 0;
 static unsigned short port = 8080;
@@ -112,9 +113,9 @@ void connect_pk1000() {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
-    serv_addr.sin_addr.s_addr = inet_addr("192.168.0.19");
+    serv_addr.sin_addr.s_addr = inet_addr(DEFAULT_HOST);
 
-    printf("Connecting to PK-1000 system by IP-address 192.168.0.19\n");
+    printf("Connecting to PK-1000 system by IP-address %s\n", DEFAULT_HOST);
     connect(sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
     pthread_create(&receiver_thread, NULL, receiver, (void*)&sockfd);
     console(sockfd);
