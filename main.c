@@ -64,6 +64,7 @@ void *receiver(void *sfd)
 {
     char buffer[BUFF_SIZE] = {0};
     int sockfd = *(int*)sfd;
+    int numsamples;
     ssize_t readlen;
 
     while(1) {
@@ -73,9 +74,9 @@ void *receiver(void *sfd)
             continue;
 
         pthread_mutex_lock(&console_cv_lock);
-
+        numsamples += readlen/52;
         if(sample_info)
-            fprintf(file, "Sample received. length: %i bytes, hex: %s, status: %s\n", (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+            fprintf(file, "Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", numsamples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
 
         pthread_cond_signal(&console_cv);
         pthread_mutex_unlock(&console_cv_lock);
