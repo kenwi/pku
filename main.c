@@ -8,6 +8,8 @@
 #include <arpa/inet.h>
 #include <getopt.h>
 
+#include "pk1000.h"
+
 #define BUFF_SIZE 1024
 
 int sample_info = 0;
@@ -17,34 +19,6 @@ char *host = "192.168.0.19";
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
 FILE *file;
-
-#pragma pack(1)
-typedef struct {
-    uint8_t id;
-    uint16_t x, y, z;
-} position_t;
-
-typedef struct {
-    uint8_t id;
-    uint16_t distance;
-} distance_t;
-
-typedef struct {
-    uint16_t frame_header;
-    position_t tag;
-
-    distance_t tags[4];
-    position_t anchors[4];
-
-    uint8_t counts;
-    uint16_t frame_footer;
-} pk1000_t, *ppk1000_t;
-
-typedef struct {
-    uint16_t frame_header;
-
-    uint16_t frame_footer;
-} pk1000_setup_t;
 
 void usage()
 {
