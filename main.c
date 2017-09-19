@@ -34,38 +34,43 @@ void usage()
     exit(EXIT_FAILURE);
 }
 
+char getTime(char *str){
+    time_t time_now;
+    struct tm *cal_time;
+
+    time_now = time(NULL);
+    cal_time = localtime(&time_now);
+    strftime(str, 50, "%Y-%m-%d, %H:%M:%S", cal_time);
+}
+
 void *receiver(void *sfd)
 {
     char buffer[BUFF_SIZE] = {0};
     int sockfd = *(int*)sfd;
-    int numsamples = 0;
+    int num_samples = 0;
+    int run = 1;
     ssize_t readlen;
+    char t_str[50];
 
-    while(1) {
+    while(run) {
         memset(buffer, 0, sizeof buffer);
         readlen = read(sockfd, buffer, sizeof buffer);
         if(readlen < 1)
             continue;
 
         pthread_mutex_lock(&console_cv_lock);
-        numsamples += readlen/52;
+
+        num_samples += readlen/52;
+        getTime(t_str);
 
         if(sample_info) {
-            fprintf(file, "Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", numsamples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
         }
         else if(readlen/52 == 1) {
             ppk1000_t pk1000 = (ppk1000_t)buffer;
-            /*fprintf(file, "counts: %i,tag id = %i, x = %i, y = %i, z = %i\n",
-                    pk1000->counts, pk1000->tag.id, pk1000->tag.x, pk1000->tag.y, pk1000->tag.z);
-            */
-            int i;
             fprintf(file, "## Distances to tags ##\n");
-            for(i=0; i<4; fprintf(file, "tag id = %i, distance = %i\n", pk1000->tags[i].id, pk1000->tags[i++].distance));
-
-            //fprintf(file, "\n## Positions of anchors ##\n");
-            //for(i=0; i<4; fprintf(file, "tag id = %i, x = %i, y = %i, z = %i\n", pk1000->anchors[i].id, pk1000->anchors[i].x, pk1000->anchors[i].y, pk1000->anchors[i++].z));
+            for(int i=0; i<4; fprintf(file, "%s: tag id = %i, distance = %i\n", t_str, pk1000->tags[i].id, pk1000->tags[i++].distance));
         }
-
 
         pthread_cond_signal(&console_cv);
         pthread_mutex_unlock(&console_cv_lock);
@@ -135,6 +140,7 @@ int main(int argc, char **argv)
 {
     char *filename = NULL;
     int connect_to_pk1000 = 0;
+    time_t time_now;
 
     int opt;
     while((opt = getopt(argc, argv, "cith:p:")) != -1) {
