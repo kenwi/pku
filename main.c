@@ -38,7 +38,7 @@ void *receiver(void *sfd)
 {
     char buffer[BUFF_SIZE] = {0};
     int sockfd = *(int*)sfd;
-    int numsamples;
+    int numsamples = 0;
     ssize_t readlen;
 
     while(1) {
@@ -49,8 +49,23 @@ void *receiver(void *sfd)
 
         pthread_mutex_lock(&console_cv_lock);
         numsamples += readlen/52;
-        if(sample_info)
+
+        if(sample_info) {
             fprintf(file, "Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", numsamples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+        }
+        else if(readlen/52 == 1) {
+            ppk1000_t pk1000 = (ppk1000_t)buffer;
+            /*fprintf(file, "counts: %i,tag id = %i, x = %i, y = %i, z = %i\n",
+                    pk1000->counts, pk1000->tag.id, pk1000->tag.x, pk1000->tag.y, pk1000->tag.z);
+            */
+            int i;
+            fprintf(file, "## Distances to tags ##\n");
+            for(i=0; i<4; fprintf(file, "tag id = %i, distance = %i\n", pk1000->tags[i].id, pk1000->tags[i++].distance));
+
+            //fprintf(file, "\n## Positions of anchors ##\n");
+            //for(i=0; i<4; fprintf(file, "tag id = %i, x = %i, y = %i, z = %i\n", pk1000->anchors[i].id, pk1000->anchors[i].x, pk1000->anchors[i].y, pk1000->anchors[i++].z));
+        }
+
 
         pthread_cond_signal(&console_cv);
         pthread_mutex_unlock(&console_cv_lock);
@@ -145,6 +160,7 @@ int main(int argc, char **argv)
 
             case 'h':
                 host = strdup(optarg);
+                connect_to_pk1000 = 1;
                 printf("Setting changed, host: %s\n", host);
                 break;
             default:
