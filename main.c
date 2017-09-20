@@ -22,6 +22,7 @@ struct application {
     int port;
     int sockfd;
     int verbose;
+    int frame_info;
 
     char *host;
     char *filename;
@@ -40,6 +41,7 @@ void usage() {
            "Usage:\tpku [-options] filename\n"
             "\t[-c connects with default settings]\n"
             "\t[-i print sample data]\n"
+            "\t[-f print frame info]\n"
             "\t[-t test casting]\n"
             "\t[-n collect n samples and terminated]\n"
             "\t[-v verbose output]\n"
@@ -110,6 +112,11 @@ void *receiver(void *sfd) {
         if(app->sample_info) {
             for(int i=0; i<readlen; fprintf(file, i == readlen-1 ? "%x\n" : "%x, ", buffer[i++]));
         }
+        if(app->frame_info) {
+            ppk1000_t pk1000 = (ppk1000_t)buffer;
+            fprintf(file, "Frame header: %x, footer: %x\n",pk1000->frame_header, pk1000->frame_footer);
+        }
+
         if(app->num_samples_terminate > 0) {
             if(num_samples >= app->num_samples_terminate) {
                 fprintf(file, "Max number of samples collected: %i. Terminating.\n", num_samples);
@@ -117,6 +124,7 @@ void *receiver(void *sfd) {
                 pthread_exit(0);
             }
         }
+
 
         /*
         if(sample_info) {
@@ -180,40 +188,38 @@ void init_application(struct application *app, int argc, char **argv) {
     app->verbose = 0;
 
     int opt;
-    while((opt = getopt(argc, argv, "cith:p:n:v")) != -1) {
+    while((opt = getopt(argc, argv, "cith:p:n:vf")) != -1) {
         switch(opt) {
             case 'c':
                 app->connect_to_pk1000 = 1;
                 break;
-
             case 'p':
                 app->port = atoi(optarg);
                 fprintf(stdout, "Settings changed, port: %i\n", app->port);
                 break;
-
             case 'i':
                 app->sample_info = 1;
                 fprintf(stdout, "Settings changed, sample_info: %i\n", app->sample_info);
                 break;
-
             case 't':
                 test_casting();
                 exit(EXIT_SUCCESS);
-
             case 'h':
                 app->connect_to_pk1000 = 1;
                 app->host = strdup(optarg);
                 fprintf(stdout, "Settings changed, host: %s\n", app->host);
                 break;
-
             case 'n':
                 app->num_samples_terminate = atoi(optarg);
                 fprintf(stdout, "Settings changed, num_samples_terminate: %i\n", app->num_samples_terminate);
                 break;
-
             case 'v':
                 app->verbose = 1;
                 fprintf(stdout, "Settings changed, verbose: %i\n", app->verbose);
+                break;
+            case 'f':
+                app->frame_info = 1;
+                fprintf(stdout, "Settings changed, frame_info: %i\n", app->frame_info);
                 break;
             default:
                 usage();

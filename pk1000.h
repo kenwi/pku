@@ -23,6 +23,7 @@ typedef struct {
 
 typedef struct {
     uint16_t frame_header;
+
     position_t tag;
 
     distance_t tags[4];
