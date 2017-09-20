@@ -20,6 +20,7 @@ struct application {
     int connect_to_pk1000;
     int sample_info;
     int port;
+    int sockfd;
 
     char *host;
     char *filename;
@@ -30,7 +31,7 @@ void test_casting();
 char getTime(char *str);
 void *receiver(void *sfd);
 void console(int sockfd);
-void connect_pk1000(struct application *app, int spawn_console);
+int connect_pk1000(struct application *app);
 void init_application(struct application *app, int argc, char **argv);
 
 void usage()
@@ -82,8 +83,9 @@ char getTime(char *str){
 
 void *receiver(void *sfd)
 {
+    struct application *app = (struct application*)sfd;
+
     char buffer[BUFF_SIZE] = {0};
-    int sockfd = *(int*)sfd;
     int num_samples = 0;
     int run = 1;
     ssize_t readlen;
@@ -91,11 +93,11 @@ void *receiver(void *sfd)
 
     while(run) {
         memset(buffer, 0, sizeof buffer);
-        readlen = read(sockfd, buffer, sizeof buffer);
+        readlen = read(app->sockfd, buffer, sizeof buffer);
 
         if(readlen < 1) {
             fprintf(file, "Error in receiving data from PK-1000. Cleaning up thread.\n");
-            close(sockfd);
+            close(app->sockfd);
             pthread_exit(0);
         }
 
@@ -140,22 +142,22 @@ void console(int sockfd)
     }
 }
 
-void connect_pk1000(struct application *app, int spawn_console) {
-    int sockfd;
+int connect_pk1000(struct application *app) {
+    void *ptr = app;
     struct sockaddr_in serv_addr;
 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    app->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(app->port);
     serv_addr.sin_addr.s_addr = inet_addr(app->host);
 
-    printf("Connecting to PK-1000 system host: %s\n", app->host);
-    connect(sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
-    pthread_create(&receiver_thread, NULL, receiver, (void*)&sockfd);
 
-    if(spawn_console) {
-        console(sockfd);
-    }
+    printf("Connecting to PK-1000 system host: %s\n", app->host);
+    connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
+    pthread_create(&receiver_thread, NULL, receiver, ptr);//(void*)&sockfd);
+    console(app->sockfd);
+
+    return app->sockfd;
 }
 
 void init_application(struct application *app, int argc, char **argv)
@@ -163,9 +165,11 @@ void init_application(struct application *app, int argc, char **argv)
     app->num_samples_terminate = 0;
     app->connect_to_pk1000 = 0;
     app->sample_info = 0;
+    app->sockfd = 0;
     app->port = 8080;
     app->host = "192.168.0.19";
     app->filename = "-";
+
 
     int opt;
     while((opt = getopt(argc, argv, "cith:p:n:")) != -1) {
@@ -221,8 +225,9 @@ int main(int argc, char **argv)
         }
     }
 
-    if(app.connect_to_pk1000)
-        connect_pk1000(&app, 1);
+    if(app.connect_to_pk1000) {
+        connect_pk1000(&app);
+    }
 
     /* cleanup */
     if(file != stdout)
