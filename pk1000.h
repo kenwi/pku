@@ -5,6 +5,8 @@
 #ifndef PKU_PK1000_H
 #define PKU_PK1000_H
 
+#define BUFF_SIZE 1024
+
 #pragma pack(1)
 
 #include <stdint.h>

@@ -10,16 +10,10 @@
 
 #include "pk1000.h"
 
-#define BUFF_SIZE 1024
-
-//int sample_info = 0;
-//static unsigned short port = 8080;
-//char *host = "192.168.0.19";
-
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
-FILE *file;
 pthread_t receiver_thread;
+FILE *file;
 
 struct application {
     int num_samples_terminate;
@@ -227,10 +221,8 @@ int main(int argc, char **argv)
         }
     }
 
-
     if(app.connect_to_pk1000)
         connect_pk1000(&app, 1);
-
 
     /* cleanup */
     if(file != stdout)
