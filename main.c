@@ -94,25 +94,22 @@ void *receiver(void *sfd) {
     while(run) {
         memset(buffer, 0, sizeof buffer);
         readlen = read(app->sockfd, buffer, sizeof buffer);
+        getTime(t_str);
+        pthread_mutex_lock(&console_cv_lock);
 
         if(readlen < 1) {
-            fprintf(file, "Error in receiving data from PK-1000. Cleaning up thread.\n");
+            fprintf(file, "%s: Error in receiving data from PK-1000. Cleaning up thread.\n", t_str);
             close(app->sockfd);
             pthread_exit(0);
         }
-
-        pthread_mutex_lock(&console_cv_lock);
         num_samples += readlen/52;
-        getTime(t_str);
 
         if(app->verbose) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
         }
-
         if(app->sample_info) {
             for(int i=0; i<readlen; fprintf(file, i == readlen-1 ? "%x\n" : "%x, ", buffer[i++]));
         }
-
         if(app->num_samples_terminate > 0) {
             if(num_samples >= app->num_samples_terminate) {
                 fprintf(file, "Max number of samples collected: %i. Terminating.\n", num_samples);
