@@ -12,13 +12,32 @@
 
 #define BUFF_SIZE 1024
 
-int sample_info = 0;
-static unsigned short port = 8080;
-char *host = "192.168.0.19";
+//int sample_info = 0;
+//static unsigned short port = 8080;
+//char *host = "192.168.0.19";
 
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
 FILE *file;
+pthread_t receiver_thread;
+
+struct application {
+    int num_samples_terminate;
+    int connect_to_pk1000;
+    int sample_info;
+    int port;
+
+    char *host;
+    char *filename;
+};
+
+void usage();
+void test_casting();
+char getTime(char *str);
+void *receiver(void *sfd);
+void console(int sockfd);
+void connect_pk1000(struct application *app, int spawn_console);
+void init_application(struct application *app, int argc, char **argv);
 
 void usage()
 {
@@ -27,90 +46,12 @@ void usage()
             "\t[-c connects with default settings]\n"
             "\t[-i only print sample info]\n"
             "\t[-t test casting]\n"
+            "\t[-n collect n samples and terminated]\n"
             "\t[-h host (default: 192.168.0.19)]\n"
             "\t[-p port (default: 8080)]\n"
             "\tfilename (default: '-' dumps samples to stdout)\n"
     );
     exit(EXIT_FAILURE);
-}
-
-char getTime(char *str){
-    time_t time_now;
-    struct tm *cal_time;
-
-    time_now = time(NULL);
-    cal_time = localtime(&time_now);
-    strftime(str, 50, "%Y-%m-%d, %H:%M:%S", cal_time);
-}
-
-void *receiver(void *sfd)
-{
-    char buffer[BUFF_SIZE] = {0};
-    int sockfd = *(int*)sfd;
-    int num_samples = 0;
-    int run = 1;
-    ssize_t readlen;
-    char t_str[50];
-
-    while(run) {
-        memset(buffer, 0, sizeof buffer);
-        readlen = read(sockfd, buffer, sizeof buffer);
-        if(readlen < 1)
-            continue;
-
-        pthread_mutex_lock(&console_cv_lock);
-
-        num_samples += readlen/52;
-        getTime(t_str);
-
-        if(sample_info) {
-            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
-        }
-        else if(readlen/52 == 1) {
-            ppk1000_t pk1000 = (ppk1000_t)buffer;
-            fprintf(file, "## Distances to tags ##\n");
-            for(int i=0; i<4; fprintf(file, "%s: tag id = %i, distance = %i\n", t_str, pk1000->tags[i].id, pk1000->tags[i++].distance));
-        }
-
-        pthread_cond_signal(&console_cv);
-        pthread_mutex_unlock(&console_cv_lock);
-    }
-}
-
-void console(int sockfd)
-{
-    char buffer[BUFF_SIZE];
-    memset(buffer, 0, sizeof buffer);
-
-    while(1)     {
-        fgets(buffer, sizeof buffer, stdin);
-        buffer[strlen(buffer)-1] = '\0';
-
-        if(strcmp(buffer, "") == 0)
-            continue;
-        if(strncmp(buffer, "exit", 4) == 0) {
-            pthread_mutex_destroy(&console_cv_lock);
-            pthread_cond_destroy(&console_cv);
-            _exit(EXIT_SUCCESS);
-        }
-    }
-}
-
-void connect_pk1000() {
-    int sockfd;
-    struct sockaddr_in serv_addr;
-
-    pthread_t receiver_thread;
-
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
-    serv_addr.sin_addr.s_addr = inet_addr(host);
-
-    printf("Connecting to PK-1000 system host: %s\n", host);
-    connect(sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
-    pthread_create(&receiver_thread, NULL, receiver, (void*)&sockfd);
-    console(sockfd);
 }
 
 void test_casting() {
@@ -136,60 +77,160 @@ void test_casting() {
     for(i=0; i<4; printf("tag id = %i, x = %i, y = %i, z = %i\n", pk1000->anchors[i].id, pk1000->anchors[i].x, pk1000->anchors[i].y, pk1000->anchors[i++].z));
 }
 
-int main(int argc, char **argv)
-{
-    char *filename = NULL;
-    int connect_to_pk1000 = 0;
+char getTime(char *str){
     time_t time_now;
+    struct tm *cal_time;
+
+    time_now = time(NULL);
+    cal_time = localtime(&time_now);
+    strftime(str, 50, "%Y-%m-%d, %H:%M:%S", cal_time);
+}
+
+void *receiver(void *sfd)
+{
+    char buffer[BUFF_SIZE] = {0};
+    int sockfd = *(int*)sfd;
+    int num_samples = 0;
+    int run = 1;
+    ssize_t readlen;
+    char t_str[50];
+
+    while(run) {
+        memset(buffer, 0, sizeof buffer);
+        readlen = read(sockfd, buffer, sizeof buffer);
+
+        if(readlen < 1) {
+            fprintf(file, "Error in receiving data from PK-1000. Cleaning up thread.\n");
+            close(sockfd);
+            pthread_exit(0);
+        }
+
+        pthread_mutex_lock(&console_cv_lock);
+
+        num_samples += readlen/52;
+        getTime(t_str);
+        fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+
+        /*
+        if(sample_info) {
+            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+        }
+        else if(readlen/52 == 1) {
+            ppk1000_t pk1000 = (ppk1000_t)buffer;
+            fprintf(file, "## Distances to tags ##\n");
+            for(int i=0; i<4; fprintf(file, "%s: tag id = %i, distance = %i\n", t_str, pk1000->tags[i].id, pk1000->tags[i++].distance));
+        }*/
+
+        pthread_cond_signal(&console_cv);
+        pthread_mutex_unlock(&console_cv_lock);
+    }
+}
+
+void console(int sockfd)
+{
+    char buffer[BUFF_SIZE];
+    memset(buffer, 0, sizeof buffer);
+
+    while(1) {
+        fgets(buffer, sizeof buffer, stdin);
+        buffer[strlen(buffer)-1] = '\0';
+
+        if(strcmp(buffer, "") == 0)
+            continue;
+
+        if(strncmp(buffer, "exit", 4) == 0) {
+            pthread_mutex_destroy(&console_cv_lock);
+            pthread_cond_destroy(&console_cv);
+            _exit(EXIT_SUCCESS);
+        }
+    }
+}
+
+void connect_pk1000(struct application *app, int spawn_console) {
+    int sockfd;
+    struct sockaddr_in serv_addr;
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(app->port);
+    serv_addr.sin_addr.s_addr = inet_addr(app->host);
+
+    printf("Connecting to PK-1000 system host: %s\n", app->host);
+    connect(sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
+    pthread_create(&receiver_thread, NULL, receiver, (void*)&sockfd);
+
+    if(spawn_console) {
+        console(sockfd);
+    }
+}
+
+void init_application(struct application *app, int argc, char **argv)
+{
+    app->num_samples_terminate = 0;
+    app->connect_to_pk1000 = 0;
+    app->sample_info = 0;
+    app->port = 8080;
+    app->host = "192.168.0.19";
+    app->filename = "-";
 
     int opt;
-    while((opt = getopt(argc, argv, "cith:p:")) != -1) {
+    while((opt = getopt(argc, argv, "cith:p:n:")) != -1) {
         switch(opt) {
             case 'c':
-                connect_to_pk1000  = 1;
+                app->connect_to_pk1000 = 1;
                 break;
 
             case 'p':
-                port = atoi(optarg);
-                printf("Setting changed, port: %i\n", port);
+                app->port = atoi(optarg);
                 break;
 
             case 'i':
-                sample_info = 1;
-                printf("Setting changed, sample_info: %i\n", sample_info);
+                app->sample_info = 1;
                 break;
 
             case 't':
-                printf("Internal testing of casting\n");
                 test_casting();
                 exit(EXIT_SUCCESS);
 
             case 'h':
-                host = strdup(optarg);
-                connect_to_pk1000 = 1;
-                printf("Setting changed, host: %s\n", host);
+                app->connect_to_pk1000 = 1;
+                app->host = strdup(optarg);
+                break;
+
+            case 'n':
+                fprintf(stdout, "Settings changed, num_samples_terminate: %i\n", app->num_samples_terminate);
+                app->num_samples_terminate = atoi(optarg);
                 break;
             default:
                 usage();
                 break;
         }
     }
+}
+
+int main(int argc, char **argv)
+{
+    struct application app;
+    init_application(&app, argc, argv);
+
     if(argc == 1)
         usage();
 
-    filename = argc <= optind ? "-" : argv[optind];
-    if(strcmp(filename, "-") == 0) {
+    app.filename = argc <= optind ? "-" : argv[optind];
+    if(strcmp(app.filename, "-") == 0) {
         file = stdout;
     } else {
-        file = fopen(filename, "wb");
+        file = fopen(app.filename, "wb");
         if(!file) {
-            fprintf(stderr, "Failed to open %s\n", filename);
+            fprintf(stderr, "Failed to open %s\n", app.filename);
             exit(EXIT_FAILURE);
         }
     }
 
-    if(connect_to_pk1000)
-        connect_pk1000();
+
+    if(app.connect_to_pk1000)
+        connect_pk1000(&app, 1);
+
 
     /* cleanup */
     if(file != stdout)
