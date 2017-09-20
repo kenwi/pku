@@ -110,22 +110,20 @@ void *receiver(void *sfd) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
         }
         if(app->sample_info) {
+            fprintf(file, "%s: ", t_str);
             for(int i=0; i<readlen; fprintf(file, i == readlen-1 ? "%x\n" : "%x, ", buffer[i++]));
         }
         if(app->frame_info) {
             ppk1000_t pk1000 = (ppk1000_t)buffer;
-            fprintf(file, "Frame header: %x, footer: %x\n",pk1000->frame_header, pk1000->frame_footer);
+            fprintf(file, "%s: Frame header: %x, footer: %x\n",t_str, pk1000->frame_header, pk1000->frame_footer);
         }
-
         if(app->num_samples_terminate > 0) {
             if(num_samples >= app->num_samples_terminate) {
-                fprintf(file, "Max number of samples collected: %i. Terminating.\n", num_samples);
+                fprintf(file, "%s: Max number of samples collected: %i. Terminating.\n", t_str, num_samples);
                 close(app->sockfd);
                 pthread_exit(0);
             }
         }
-
-
         /*
         if(sample_info) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
