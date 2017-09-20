@@ -21,6 +21,7 @@ struct application {
     int sample_info;
     int port;
     int sockfd;
+    int verbose;
 
     char *host;
     char *filename;
@@ -38,9 +39,10 @@ void usage() {
     printf("pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.\n\n"
            "Usage:\tpku [-options] filename\n"
             "\t[-c connects with default settings]\n"
-            "\t[-i only print sample info]\n"
+            "\t[-i print sample data]\n"
             "\t[-t test casting]\n"
             "\t[-n collect n samples and terminated]\n"
+            "\t[-v verbose output]\n"
             "\t[-h host (default: 192.168.0.19)]\n"
             "\t[-p port (default: 8080)]\n"
             "\tfilename (default: '-' dumps samples to stdout)\n"
@@ -100,10 +102,16 @@ void *receiver(void *sfd) {
         }
 
         pthread_mutex_lock(&console_cv_lock);
-
         num_samples += readlen/52;
         getTime(t_str);
-        fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+
+        if(app->verbose) {
+            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+        }
+
+        if(app->sample_info) {
+            for(int i=0; i<readlen; fprintf(file, i == readlen-1 ? "%x\n" : "%x, ", buffer[i++]));
+        }
 
         if(app->num_samples_terminate > 0) {
             if(num_samples >= app->num_samples_terminate) {
@@ -173,9 +181,10 @@ void init_application(struct application *app, int argc, char **argv) {
     app->port = 8080;
     app->host = "192.168.0.19";
     app->filename = "-";
+    app->verbose = 0;
 
     int opt;
-    while((opt = getopt(argc, argv, "cith:p:n:")) != -1) {
+    while((opt = getopt(argc, argv, "cith:p:n:v")) != -1) {
         switch(opt) {
             case 'c':
                 app->connect_to_pk1000 = 1;
@@ -204,6 +213,11 @@ void init_application(struct application *app, int argc, char **argv) {
             case 'n':
                 app->num_samples_terminate = atoi(optarg);
                 fprintf(stdout, "Settings changed, num_samples_terminate: %i\n", app->num_samples_terminate);
+                break;
+
+            case 'v':
+                app->verbose = 1;
+                fprintf(stdout, "Settings changed, verbose: %i\n", app->verbose);
                 break;
             default:
                 usage();
