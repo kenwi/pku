@@ -34,8 +34,7 @@ void console(int sockfd);
 int connect_pk1000(struct application *app);
 void init_application(struct application *app, int argc, char **argv);
 
-void usage()
-{
+void usage() {
     printf("pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.\n\n"
            "Usage:\tpku [-options] filename\n"
             "\t[-c connects with default settings]\n"
@@ -72,7 +71,7 @@ void test_casting() {
     for(i=0; i<4; printf("tag id = %i, x = %i, y = %i, z = %i\n", pk1000->anchors[i].id, pk1000->anchors[i].x, pk1000->anchors[i].y, pk1000->anchors[i++].z));
 }
 
-char getTime(char *str){
+char getTime(char *str) {
     time_t time_now;
     struct tm *cal_time;
 
@@ -81,8 +80,7 @@ char getTime(char *str){
     strftime(str, 50, "%Y-%m-%d, %H:%M:%S", cal_time);
 }
 
-void *receiver(void *sfd)
-{
+void *receiver(void *sfd) {
     struct application *app = (struct application*)sfd;
 
     char buffer[BUFF_SIZE] = {0};
@@ -130,8 +128,7 @@ void *receiver(void *sfd)
     }
 }
 
-void console(int sockfd)
-{
+void console(int sockfd) {
     char buffer[BUFF_SIZE];
     memset(buffer, 0, sizeof buffer);
 
@@ -160,7 +157,7 @@ int connect_pk1000(struct application *app) {
     serv_addr.sin_addr.s_addr = inet_addr(app->host);
 
 
-    printf("Connecting to PK-1000 system host: %s\n", app->host);
+    printf("Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
     connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
     pthread_create(&receiver_thread, NULL, receiver, ptr);//(void*)&sockfd);
     console(app->sockfd);
@@ -168,8 +165,7 @@ int connect_pk1000(struct application *app) {
     return app->sockfd;
 }
 
-void init_application(struct application *app, int argc, char **argv)
-{
+void init_application(struct application *app, int argc, char **argv) {
     app->num_samples_terminate = 0;
     app->connect_to_pk1000 = 0;
     app->sample_info = 0;
@@ -187,10 +183,12 @@ void init_application(struct application *app, int argc, char **argv)
 
             case 'p':
                 app->port = atoi(optarg);
+                fprintf(stdout, "Settings changed, port: %i\n", app->port);
                 break;
 
             case 'i':
                 app->sample_info = 1;
+                fprintf(stdout, "Settings changed, sample_info: %i\n", app->sample_info);
                 break;
 
             case 't':
@@ -200,11 +198,12 @@ void init_application(struct application *app, int argc, char **argv)
             case 'h':
                 app->connect_to_pk1000 = 1;
                 app->host = strdup(optarg);
+                fprintf(stdout, "Settings changed, host: %s\n", app->host);
                 break;
 
             case 'n':
-                fprintf(stdout, "Settings changed, num_samples_terminate: %i\n", app->num_samples_terminate);
                 app->num_samples_terminate = atoi(optarg);
+                fprintf(stdout, "Settings changed, num_samples_terminate: %i\n", app->num_samples_terminate);
                 break;
             default:
                 usage();
@@ -213,8 +212,7 @@ void init_application(struct application *app, int argc, char **argv)
     }
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     struct application app;
     init_application(&app, argc, argv);
 
@@ -237,8 +235,9 @@ int main(int argc, char **argv)
     }
 
     /* cleanup */
-    if(file != stdout)
+    if(file != stdout) {
         fclose(file);
+    }
 
     return 0;
 }
