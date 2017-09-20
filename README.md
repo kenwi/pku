@@ -37,7 +37,7 @@ Usage:	pku [-options] filename
 	filename (default: '-' dumps samples to stdout)
 ```
 
-### Connect with default settings, print status of 10 samples
+### Connect to 127.0.0.1, print status of 10 samples
 ```bash
 kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -v -n 10
 Settings changed, host: 127.0.0.1
@@ -55,6 +55,25 @@ Connecting to PK-1000 system host: 127.0.0.1, port: 8080
 2017-09-20, 14:33:18: Sample [9] received. length: 52 bytes, hex: 78, status: OK
 2017-09-20, 14:33:18: Sample [10] received. length: 52 bytes, hex: 78, status: OK
 2017-09-20, 14:33:18: Max number of samples collected: 10. Terminating.
+```
+
+### Connect to 127.0.0.1, print frame header and footer hex of 10 samples.
+```bash
+kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -n 10 -f
+Settings changed, host: 127.0.0.1
+Settings changed, num_samples_terminate: 10
+Settings changed, frame_info: 1
+Connecting to PK-1000 system host: 127.0.0.1, port: 8080
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
+2017-09-20, 14:36:23: Max number of samples collected: 10. Terminating.
 ```
 
 ### Internal testing of casting
