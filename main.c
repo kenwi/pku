@@ -107,6 +107,14 @@ void *receiver(void *sfd)
         getTime(t_str);
         fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
 
+        if(app->num_samples_terminate > 0) {
+            if(num_samples >= app->num_samples_terminate) {
+                fprintf(file, "Max number of samples collected: %i. Terminating.\n", num_samples);
+                close(app->sockfd);
+                pthread_exit(0);
+            }
+        }
+
         /*
         if(sample_info) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
@@ -169,7 +177,6 @@ void init_application(struct application *app, int argc, char **argv)
     app->port = 8080;
     app->host = "192.168.0.19";
     app->filename = "-";
-
 
     int opt;
     while((opt = getopt(argc, argv, "cith:p:n:")) != -1) {
