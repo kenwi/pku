@@ -156,7 +156,6 @@ void console(int sockfd) {
 }
 
 int connect_pk1000(struct application *app) {
-    void *ptr = app;
     struct sockaddr_in serv_addr;
 
     app->sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -167,7 +166,7 @@ int connect_pk1000(struct application *app) {
 
     printf("Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
     connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
-    pthread_create(&receiver_thread, NULL, receiver, ptr);//(void*)&sockfd);
+    pthread_create(&receiver_thread, NULL, receiver, app);//(void*)&sockfd);
     console(app->sockfd);
 
     return app->sockfd;
