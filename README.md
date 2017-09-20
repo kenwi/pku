@@ -27,27 +27,34 @@ pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
 
 Usage:	pku [-options] filename
 	[-c connects with default settings]
-	[-i only print sample info]
+	[-i print sample data]
+	[-f print frame info]
 	[-t test casting]
+	[-n collect n samples and terminated]
+	[-v verbose output]
 	[-h host (default: 192.168.0.19)]
 	[-p port (default: 8080)]
 	filename (default: '-' dumps samples to stdout)
 ```
 
-### Connect with default settings, print status of samples
+### Connect with default settings, print status of 10 samples
 ```bash
-kenwi@wardenclyffe:~/git/pku/build$ ./pku -c -i
-Connecting to PK-1000 system by IP-address 192.168.0.19
-Sample received. length: 52 bytes, hex: 78, status: OK
-Sample received. length: 52 bytes, hex: 78, status: OK
-Sample received. length: 52 bytes, hex: 78, status: OK
-...
-...
-...
-Sample received. length: 104 bytes, hex: 78, status: BAD
-Sample received. length: 52 bytes, hex: 78, status: OK
-Sample received. length: 52 bytes, hex: 78, status: OK
-Sample received. length: 52 bytes, hex: 78, status: OK
+kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -v -n 10
+Settings changed, host: 127.0.0.1
+Settings changed, verbose: 1
+Settings changed, num_samples_terminate: 10
+Connecting to PK-1000 system host: 127.0.0.1, port: 8080
+2017-09-20, 14:33:17: Sample [1] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:17: Sample [2] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:17: Sample [3] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:17: Sample [4] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:17: Sample [5] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:17: Sample [6] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:17: Sample [7] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:18: Sample [8] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:18: Sample [9] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:18: Sample [10] received. length: 52 bytes, hex: 78, status: OK
+2017-09-20, 14:33:18: Max number of samples collected: 10. Terminating.
 ```
 
 ### Internal testing of casting
