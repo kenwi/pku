@@ -35,6 +35,10 @@ void *receiver(void *sfd);
 void console(int sockfd);
 int connect_pk1000(struct application *app);
 void init_application(struct application *app, int argc, char **argv);
+int16_t to_int(int8_t a, int8_t b);
+pk1000_t make_pk1000(int8_t *bytes);
+position_t make_position(int8_t *bytes);
+distance_t make_distance(int8_t *bytes);
 
 void usage() {
     printf("pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.\n\n"
@@ -87,7 +91,7 @@ char getTime(char *str) {
 void *receiver(void *sfd) {
     struct application *app = (struct application*)sfd;
 
-    uint8_t buffer[BUFF_SIZE] = {0};
+    int8_t buffer[BUFF_SIZE] = {0};
     int num_samples = 0;
     int run = 1;
     ssize_t readlen;
@@ -117,12 +121,16 @@ void *receiver(void *sfd) {
             fprintf(file, "\n");
         }
         if(app->frame_info) {
+            pk1000_t pk1000 = make_pk1000(&buffer);
+
+            /*
             ppk1000_t pk1000 = (ppk1000_t)buffer;
-            fprintf(file, "\t\t\tTag0 \tAnc0\tAnc1\tAnc2\tAnc3\n");
+            fprintf(file, "\t\t\tTag0 \tAnc%i\tAnc%i\tAnc%i\tAnc%i\n", pk1000->anchors[0].id, pk1000->anchors[1].id, pk1000->anchors[2].id, pk1000->anchors[3].id);
             fprintf(file, "Range(cm)\t\t\t%i\t%i\t%i\t\t%i\n",pk1000->tags[0].distance, pk1000->tags[1].distance, pk1000->tags[2].distance, pk1000->tags[3].distance);
             fprintf(file, "X(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n", pk1000->tag.x, pk1000->anchors[0].x, pk1000->anchors[1].x, pk1000->anchors[2].x, pk1000->anchors[3].x);
             fprintf(file, "Y(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n", pk1000->tag.y, pk1000->anchors[0].y, pk1000->anchors[1].y, pk1000->anchors[2].y, pk1000->anchors[3].y);
             fprintf(file, "Z(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n\n", pk1000->tag.z, pk1000->anchors[0].z, pk1000->anchors[1].z, pk1000->anchors[2].z, pk1000->anchors[3].z);
+             */
         }
         if(app->num_samples_terminate > 0) {
             if(num_samples >= app->num_samples_terminate) {
@@ -223,12 +231,51 @@ void init_application(struct application *app, int argc, char **argv) {
     }
 }
 
+int16_t to_int(int8_t a, int8_t b) {
+    return ((a & 0xff) << 8) | (b & 0xff);
+}
+
+pk1000_t make_pk1000(int8_t *bytes) {
+    pk1000_t pk1000;
+    pk1000.frame_header = to_int(bytes[0], bytes[1]);
+    pk1000.tag = make_position(&bytes[3]);
+    return pk1000;
+}
+
+position_t make_position(int8_t *bytes) {
+    position_t position;
+    position.id = (bytes[0] & 0xff) << 8;
+    position.x = to_int(bytes[1], bytes[2]);
+    position.y = to_int(bytes[3], bytes[4]);
+    position.z = to_int(bytes[5], bytes[6]);
+    return position;
+}
+
+distance_t make_distance(int8_t *bytes) {
+    distance_t distance;
+    distance.id = bytes[0];
+    distance.distance = to_int(bytes[1], bytes[2]);
+    return distance;
+}
+
 int main(int argc, char **argv) {
     struct application app;
     init_application(&app, argc, argv);
 
     if(argc == 1)
         usage();
+
+    /*
+    int8_t buffer[] = {0x01, 0x00, 0xfe, 0xb9, 0x01, 0x53};
+    int16_t x = to_int(buffer[0], buffer[1]);
+    int16_t y = to_int(buffer[2], buffer[3]);
+    int16_t z = to_int(buffer[4], buffer[5]);
+    */
+
+    //int8_t buffer2[] = { 0x00, 0x01, 0x1c, 0x01, 0x1d, 0xff, 0xc4 };
+    //distance_t distance = make_distance(&buffer2);
+    int8_t buffer[] = { 0x37, 0x38, 0x00, 0x01, 0x1c, 0x01, 0x1d, 0xff, 0xc4 };
+    pk1000_t pk1000 = make_pk1000(&buffer);
 
     app.filename = argc <= optind ? "-" : argv[optind];
     if(strcmp(app.filename, "-") == 0) {

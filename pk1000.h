@@ -12,17 +12,17 @@
 #include <stdint.h>
 
 typedef struct {
-    uint8_t id;
-    uint16_t x, y, z;
+    int8_t id;
+    int16_t x, y, z;
 } position_t;
 
 typedef struct {
-    uint8_t id;
-    uint16_t distance;
+    int8_t id;
+    int16_t distance;
 } distance_t;
 
 typedef struct {
-    uint16_t frame_header;
+    int16_t frame_header;
     position_t tag;
     distance_t tags[4];
     position_t anchors[4];
