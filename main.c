@@ -110,10 +110,6 @@ void *receiver(void *sfd) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex 0: %02X, hex 1: %02X status: %s\n", t_str, num_samples,  (int)readlen, buffer[0], buffer[1], readlen == 52 ? "OK" : "BAD");
         }
         if(app->sample_data) {
-
-            //fprintf(file, "%s: ", t_str);
-            //for(int i=0; i<readlen; fprintf(file, i == readlen-1 ? "%x\n" : "%x, ", buffer[i++]));
-
             fprintf(file, "%s: ", t_str);
             for(int i=0; i<readlen; i+=2) {
                 fprintf(file, "%02x%02x ", buffer[i], buffer[i+1]);
@@ -122,7 +118,11 @@ void *receiver(void *sfd) {
         }
         if(app->frame_info) {
             ppk1000_t pk1000 = (ppk1000_t)buffer;
-            fprintf(file, "%s: Frame header: %x, footer: %x\n",t_str, pk1000->frame_header, pk1000->frame_footer);
+            fprintf(file, "\t\t\tTag0 \tAnc0\tAnc1\tAnc2\tAnc3\n");
+            fprintf(file, "Range(cm)\t\t\t%i\t%i\t%i\t\t%i\n",pk1000->tags[0].distance, pk1000->tags[1].distance, pk1000->tags[2].distance, pk1000->tags[3].distance);
+            fprintf(file, "X(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n", pk1000->tag.x, pk1000->anchors[0].x, pk1000->anchors[1].x, pk1000->anchors[2].x, pk1000->anchors[3].x);
+            fprintf(file, "Y(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n", pk1000->tag.y, pk1000->anchors[0].y, pk1000->anchors[1].y, pk1000->anchors[2].y, pk1000->anchors[3].y);
+            fprintf(file, "Z(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n\n", pk1000->tag.z, pk1000->anchors[0].z, pk1000->anchors[1].z, pk1000->anchors[2].z, pk1000->anchors[3].z);
         }
         if(app->num_samples_terminate > 0) {
             if(num_samples >= app->num_samples_terminate) {
