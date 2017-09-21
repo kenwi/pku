@@ -131,16 +131,6 @@ void *receiver(void *sfd) {
                 pthread_exit(0);
             }
         }
-        /*
-        if(sample_data) {
-            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
-        }
-        else if(readlen/52 == 1) {
-            ppk1000_t pk1000 = (ppk1000_t)buffer;
-            fprintf(file, "## Distances to tags ##\n");
-            for(int i=0; i<4; fprintf(file, "%s: tag id = %i, distance = %i\n", t_str, pk1000->tags[i].id, pk1000->tags[i++].distance));
-        }*/
-
         pthread_cond_signal(&console_cv);
         pthread_mutex_unlock(&console_cv_lock);
     }
