@@ -18,7 +18,7 @@ FILE *file;
 struct application {
     int num_samples_terminate;
     int connect_to_pk1000;
-    int sample_info;
+    int sample_data;
     int port;
     int sockfd;
     int verbose;
@@ -87,7 +87,7 @@ char getTime(char *str) {
 void *receiver(void *sfd) {
     struct application *app = (struct application*)sfd;
 
-    char buffer[BUFF_SIZE] = {0};
+    uint8_t buffer[BUFF_SIZE] = {0};
     int num_samples = 0;
     int run = 1;
     ssize_t readlen;
@@ -107,11 +107,18 @@ void *receiver(void *sfd) {
         num_samples += readlen/52;
 
         if(app->verbose) {
-            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
+            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex 0: %02X, hex 1: %02X status: %s\n", t_str, num_samples,  (int)readlen, buffer[0], buffer[1], readlen == 52 ? "OK" : "BAD");
         }
-        if(app->sample_info) {
+        if(app->sample_data) {
+
+            //fprintf(file, "%s: ", t_str);
+            //for(int i=0; i<readlen; fprintf(file, i == readlen-1 ? "%x\n" : "%x, ", buffer[i++]));
+
             fprintf(file, "%s: ", t_str);
-            for(int i=0; i<readlen; fprintf(file, i == readlen-1 ? "%x\n" : "%x, ", buffer[i++]));
+            for(int i=0; i<readlen; i+=2) {
+                fprintf(file, "%02x%02x ", buffer[i], buffer[i+1]);
+            }
+            fprintf(file, "\n");
         }
         if(app->frame_info) {
             ppk1000_t pk1000 = (ppk1000_t)buffer;
@@ -125,7 +132,7 @@ void *receiver(void *sfd) {
             }
         }
         /*
-        if(sample_info) {
+        if(sample_data) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex: %s, status: %s\n", t_str, num_samples,  (int)readlen, buffer, readlen == 52 ? "OK" : "BAD");
         }
         else if(readlen/52 == 1) {
@@ -178,7 +185,7 @@ int connect_pk1000(struct application *app) {
 void init_application(struct application *app, int argc, char **argv) {
     app->num_samples_terminate = 0;
     app->connect_to_pk1000 = 0;
-    app->sample_info = 0;
+    app->sample_data = 0;
     app->sockfd = 0;
     app->port = 8080;
     app->host = "192.168.0.19";
@@ -196,8 +203,8 @@ void init_application(struct application *app, int argc, char **argv) {
                 fprintf(stdout, "Settings changed, port: %i\n", app->port);
                 break;
             case 'i':
-                app->sample_info = 1;
-                fprintf(stdout, "Settings changed, sample_info: %i\n", app->sample_info);
+                app->sample_data = 1;
+                fprintf(stdout, "Settings changed, sample_data: %i\n", app->sample_data);
                 break;
             case 't':
                 test_casting();
