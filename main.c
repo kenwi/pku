@@ -35,6 +35,7 @@ void *receiver(void *sfd);
 void console(int sockfd);
 int connect_pk1000(struct application *app);
 void init_application(struct application *app, int argc, char **argv);
+
 int16_t to_int(int8_t a, int8_t b);
 pk1000_t make_pk1000(int8_t *bytes);
 position_t make_position(int8_t *bytes);
@@ -235,14 +236,15 @@ int16_t to_int(int8_t a, int8_t b) {
     return ((a & 0xff) << 8) | (b & 0xff);
 }
 
-pk1000_t make_pk1000(int8_t *bytes) {
+pk1000_t make_pk1000(int8_t bytes[]) {
     pk1000_t pk1000;
     pk1000.frame_header = to_int(bytes[0], bytes[1]);
+
     pk1000.tag = make_position(&bytes[3]);
     return pk1000;
 }
 
-position_t make_position(int8_t *bytes) {
+position_t make_position(int8_t bytes[]) {
     position_t position;
     position.id = (bytes[0] & 0xff) << 8;
     position.x = to_int(bytes[1], bytes[2]);
@@ -251,12 +253,18 @@ position_t make_position(int8_t *bytes) {
     return position;
 }
 
-distance_t make_distance(int8_t *bytes) {
+distance_t make_distance(int8_t bytes[]) {
     distance_t distance;
     distance.id = bytes[0];
     distance.distance = to_int(bytes[1], bytes[2]);
     return distance;
 }
+
+typedef struct foo{
+    int16_t x;
+    int16_t y;
+    int16_t z;
+};
 
 int main(int argc, char **argv) {
     struct application app;
@@ -265,17 +273,56 @@ int main(int argc, char **argv) {
     if(argc == 1)
         usage();
 
-    /*
-    int8_t buffer[] = {0x01, 0x00, 0xfe, 0xb9, 0x01, 0x53};
-    int16_t x = to_int(buffer[0], buffer[1]);
-    int16_t y = to_int(buffer[2], buffer[3]);
-    int16_t z = to_int(buffer[4], buffer[5]);
-    */
+    int8_t buffer[] = { 0x37, 0x38, // Frame header
+                        0x00,       // Tag ID
+                        0x01, 0x1c, // X
+                        0x01, 0x1e, // Y
+                        0xff, 0xc5, // Z
+
+                        0x00,       // Anchor ID 0
+                        0x02, 0x19, // Distance to tag
+                        0x01,       // Anchor ID 1
+                        0x01, 0x27, // Distance to tag
+                        0x02,       // Anchor ID 2
+                        0x00, 0x39, // Distance to tag
+                        0x03,       // Anchor ID 3
+                        0x00, 0x8B, // Distance to tag
+
+                        0x00,       // Anchor ID 0
+                        0x00, 0x00, // X
+                        0x00, 0x00, // Y
+                        0x00, 0x00, // Z
+
+                        0x01,       // Anchor ID 1
+                        0x00, 0x00, // X
+                        0x00, 0x00, // Y
+                        0x00, 0x00, // Z
+
+                        0x02,       // Anchor ID 2
+                        0x00, 0x00, // X
+                        0x00, 0x00, // Y
+                        0x00, 0x00, // Z
+
+                        0x03,       // Anchor ID 3
+                        0x00, 0x00, // X
+                        0x00, 0x00, // Y
+                        0x00, 0x00, // Z
+
+                        0x34,       // Counter
+                        0x27, 0x28  // Frame footer
+    };
+    pk1000_t pk1000 = make_pk1000(buffer);
+
+    int8_t buffer2[] = {0x01, 0x00, 0xfe, 0xb9, 0x01, 0x53};
+    int16_t x = to_int(buffer2[0], buffer2[1]);
+    int16_t y = to_int(buffer2[2], buffer2[3]);
+    int16_t z = to_int(buffer2[4], buffer2[5]);
+
 
     //int8_t buffer2[] = { 0x00, 0x01, 0x1c, 0x01, 0x1d, 0xff, 0xc4 };
     //distance_t distance = make_distance(&buffer2);
-    int8_t buffer[] = { 0x37, 0x38, 0x00, 0x01, 0x1c, 0x01, 0x1d, 0xff, 0xc4 };
-    pk1000_t pk1000 = make_pk1000(&buffer);
+    //int8_t buffer[] = { 0x37, 0x38, 0x00, 0x01, 0x1c, 0x01, 0x1d, 0xff, 0xc4 };
+    //pk1000_t pk1000 = make_pk1000(&buffer);
 
     app.filename = argc <= optind ? "-" : argv[optind];
     if(strcmp(app.filename, "-") == 0) {
