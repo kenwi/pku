@@ -27,75 +27,65 @@ pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
 
 Usage:	pku [-options] filename
 	[-c connects with default settings]
+	[-r print sample hex]
 	[-i print sample data]
-	[-f print frame info]
-	[-t test casting]
-	[-n collect n samples and terminated]
+	[-n collect n samples and terminate]
 	[-v verbose output]
 	[-h host (default: 192.168.0.19)]
 	[-p port (default: 8080)]
 	filename (default: '-' dumps samples to stdout)
 ```
 
-### Connect to 127.0.0.1, print status of 10 samples
+### Connect to 127.0.0.1, print hex of 3 samples
 ```bash
-kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -v -n 10
+kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -r -n 3
+Settings changed, host: 127.0.0.1
+Settings changed, print_raw_sample: 1
+Settings changed, num_samples_terminate: 3
+Connecting to PK-1000 system host: 127.0.0.1, port: 8080
+2017-09-22, 10:46:34: 3738 0000 7a00 fffffffe00 7d00 0114 0100 ffffffc202 006b 0301 3600 012c 0000 0032 0101 2c01 2c00 3202 0000 012c 0032 0300 0000 0000 327b 2728 
+2017-09-22, 10:46:34: 3738 0000 7a00 ffffffff00 7d00 0117 0100 ffffffc402 006a 0301 3d00 012c 0000 0032 0101 2c01 2c00 3202 0000 012c 0032 0300 0000 0000 327c 2728 
+2017-09-22, 10:46:34: 3738 0000 7b00 fffffffe00 7d00 0115 0100 ffffffc202 006f 0301 3c00 012c 0000 0032 0101 2c01 2c00 3202 0000 012c 0032 0300 0000 0000 327d 2728 
+2017-09-22, 10:46:34: Max number of samples collected: 3. Terminating.
+```
+
+### Connect to 127.0.0.1, print data of 3 samples
+```bash
+kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -i -n 3
+Settings changed, host: 127.0.0.1
+Settings changed, print_sample_data: 1
+Settings changed, num_samples_terminate: 3
+Connecting to PK-1000 system host: 127.0.0.1, port: 8080
+		Tag0 		Anc0		Anc1		Anc2		Anc3
+Range(cm)			276		190		107		315
+X(cm)		124		300		300		0		0
+Y(cm)		255		0		300		300		0
+Z(cm)		125		50		50		50		50
+
+		Tag0 		Anc0		Anc1		Anc2		Anc3
+Range(cm)			277		194		106		317
+X(cm)		123		300		300		0		0
+Y(cm)		255		0		300		300		0
+Z(cm)		125		50		50		50		50
+
+		Tag0 		Anc0		Anc1		Anc2		Anc3
+Range(cm)			277		193		105		312
+X(cm)		123		300		300		0		0
+Y(cm)		255		0		300		300		0
+Z(cm)		125		50		50		50		50
+
+2017-09-22, 10:46:46: Max number of samples collected: 3. Terminating.
+```
+
+### Verbose output will print status of received sample, number collected and the two first bytes ###
+``bash
+kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -v -n 3
 Settings changed, host: 127.0.0.1
 Settings changed, verbose: 1
-Settings changed, num_samples_terminate: 10
+Settings changed, num_samples_terminate: 3
 Connecting to PK-1000 system host: 127.0.0.1, port: 8080
-2017-09-20, 14:33:17: Sample [1] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:17: Sample [2] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:17: Sample [3] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:17: Sample [4] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:17: Sample [5] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:17: Sample [6] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:17: Sample [7] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:18: Sample [8] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:18: Sample [9] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:18: Sample [10] received. length: 52 bytes, hex: 78, status: OK
-2017-09-20, 14:33:18: Max number of samples collected: 10. Terminating.
-```
-
-### Connect to 127.0.0.1, print frame header and footer hex of 10 samples.
-```bash
-kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -n 10 -f
-Settings changed, host: 127.0.0.1
-Settings changed, num_samples_terminate: 10
-Settings changed, print_sample_data: 1
-Connecting to PK-1000 system host: 127.0.0.1, port: 8080
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
-2017-09-20, 14:36:23: Max number of samples collected: 10. Terminating.
-```
-
-### Internal testing of casting
-```bash
-kenwi@wardenclyffe:~/git/pku/build$ ./pku -t
-pk1000 size = 52
-buffer size = 52
-frame = 14391
-
-## pk1000 info ##
-counts = 52
-tag id = 0, x = 0, y = 0, z = 0
-
-## Distances to tags ##
-tag id = 1, distance = 6402
-tag id = 2, distance = 9985
-tag id = 3, distance = 14592
-tag id = 0, distance = 35584
-
-## Positions of anchors ##
-tag id = 1, x = 0, y = 0, z = 0
-tag id = 2, x = 0, y = 0, z = 0
-tag id = 3, x = 0, y = 0, z = 0
-tag id = 52, x = 10279, y = 0, z = 0
+2017-09-22, 10:48:31: Sample [1] received. length: 52 bytes, hex 0: 37, hex 1: 38 status: OK
+2017-09-22, 10:48:31: Sample [2] received. length: 52 bytes, hex 0: 37, hex 1: 38 status: OK
+2017-09-22, 10:48:32: Sample [3] received. length: 52 bytes, hex 0: 37, hex 1: 38 status: OK
+2017-09-22, 10:48:32: Max number of samples collected: 3. Terminating.
 ```
