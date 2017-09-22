@@ -10,6 +10,47 @@
 
 #include "pk1000.h"
 
+/*  BYTES               FLAG            NUM
+int8_t buffer[] = {
+        0x37, 0x38, // Frame header     0 1
+        0x00,       // Tag ID           2
+        0x01, 0x1c, // X                3 4
+        0x01, 0x1e, // Y                5 6
+        0xff, 0xc5, // Z                7 8
+
+        0x00,       // Anchor ID 0 9    9
+        0x02, 0x19, // Distance to tag  10 11
+        0x01,       // Anchor ID 1      12
+        0x01, 0x27, // Distance to tag  13 14
+        0x02,       // Anchor ID 2      15
+        0x00, 0x39, // Distance to tag  16 17
+        0x03,       // Anchor ID 3      18
+        0x00, 0x8B, // Distance to tag  19 20
+
+        0x00,       // Anchor ID 0      21
+        0x00, 0x00, // X                22 23
+        0x00, 0x00, // Y                24 25
+        0x00, 0x00, // Z                26 27
+
+        0x01,       // Anchor ID 1 28   28
+        0x00, 0x00, // X                29 30
+        0x00, 0x00, // Y                31 32
+        0x00, 0x00, // Z                33 34
+
+        0x02,       // Anchor ID 2      35
+        0x00, 0x00, // X                36 37
+        0x00, 0x00, // Y                38 39
+        0x00, 0x00, // Z                40 41
+
+        0x03,       // Anchor ID 3      42
+        0x00, 0x00, // X                43 44
+        0x00, 0x00, // Y                45 46
+        0x00, 0x00, // Z                47 48
+
+        0x34,       // Counter          49
+        0x27, 0x28  // Frame footer     50 51
+};*/
+
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
 pthread_t receiver_thread;
@@ -18,11 +59,11 @@ FILE *file;
 struct application {
     int num_samples_terminate;
     int connect_to_pk1000;
-    int sample_data;
+    int print_raw_sample;
     int port;
     int sockfd;
     int verbose;
-    int frame_info;
+    int print_sample_data;
 
     char *host;
     char *filename;
@@ -36,48 +77,49 @@ void console(int sockfd);
 int connect_pk1000(struct application *app);
 void init_application(struct application *app, int argc, char **argv);
 
-int16_t to_int(int8_t a, int8_t b);
-pk1000_t make_pk1000(int8_t *bytes);
-position_t make_position(int8_t *bytes);
-distance_t make_distance(int8_t *bytes);
+int16_t to_int(int8_t a, int8_t b) {
+    return ((a & 0xff) << 8) | (b & 0xff);
+}
+/*
+pk1000_t make_pk1000(int8_t bytes[]) {
+    pk1000_t pk1000;
+    pk1000.frame_header = to_int(bytes[0], bytes[1]);
+
+    pk1000.tag = make_position(&bytes[3]);
+    return pk1000;
+}
+
+position_t make_position(int8_t bytes[]) {
+    position_t position;
+    position.id = (bytes[0] & 0xff) << 8;
+    position.x = to_int(bytes[1], bytes[2]);
+    position.y = to_int(bytes[3], bytes[4]);
+    position.z = to_int(bytes[5], bytes[6]);
+    return position;
+}
+
+distance_t make_distance(int8_t bytes[]) {
+    distance_t distance;
+    distance.id = bytes[0];
+    distance.distance = to_int(bytes[1], bytes[2]);
+    return distance;
+}
+*/
 
 void usage() {
     printf("pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.\n\n"
            "Usage:\tpku [-options] filename\n"
             "\t[-c connects with default settings]\n"
+            "\t[-r print sample hex]\n"
             "\t[-i print sample data]\n"
-            "\t[-f print frame info]\n"
-            "\t[-t test casting]\n"
-            "\t[-n collect n samples and terminated]\n"
+            //"\t[-t test casting]\n"
+            "\t[-n collect n samples and terminate]\n"
             "\t[-v verbose output]\n"
             "\t[-h host (default: 192.168.0.19)]\n"
             "\t[-p port (default: 8080)]\n"
             "\tfilename (default: '-' dumps samples to stdout)\n"
     );
     exit(EXIT_FAILURE);
-}
-
-void test_casting() {
-    char pBuffer[] = { 0x37, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x19, 0x01,
-                       0x01, 0x27, 0x02, 0x00, 0x39, 0x03, 0x00, 0x8B, 0x00, 0x00, 0x00, 0x00, 0x00,
-                       0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
-                       0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34, 0x27, 0x28 };
-    ppk1000_t pk1000 = (ppk1000_t)pBuffer;
-
-    printf("pk1000 size = %i\n", (int)sizeof(pk1000_t));
-    printf("buffer size = %i\n", (int)sizeof(pBuffer));
-    printf("frame = %i\n\n", pk1000->frame_header);
-
-    printf("## pk1000 info ##\n");
-    printf("counts = %i\n", pk1000->counts);
-    printf("tag id = %i, x = %i, y = %i, z = %i\n\n", pk1000->tag.id, pk1000->tag.x, pk1000->tag.y, pk1000->tag.z);
-
-    int i;
-    printf("## Distances to tags ##\n");
-    for(i=0; i<4; printf("tag id = %i, distance = %i\n", pk1000->tags[i].id, pk1000->tags[i++].distance));
-
-    printf("\n## Positions of anchors ##\n");
-    for(i=0; i<4; printf("tag id = %i, x = %i, y = %i, z = %i\n", pk1000->anchors[i].id, pk1000->anchors[i].x, pk1000->anchors[i].y, pk1000->anchors[i++].z));
 }
 
 char getTime(char *str) {
@@ -114,24 +156,55 @@ void *receiver(void *sfd) {
         if(app->verbose) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex 0: %02X, hex 1: %02X status: %s\n", t_str, num_samples,  (int)readlen, buffer[0], buffer[1], readlen == 52 ? "OK" : "BAD");
         }
-        if(app->sample_data) {
+
+        if(app->print_raw_sample) {
             fprintf(file, "%s: ", t_str);
             for(int i=0; i<readlen; i+=2) {
                 fprintf(file, "%02x%02x ", buffer[i], buffer[i+1]);
             }
             fprintf(file, "\n");
         }
-        if(app->frame_info) {
-            pk1000_t pk1000 = make_pk1000(&buffer);
 
-            /*
-            ppk1000_t pk1000 = (ppk1000_t)buffer;
-            fprintf(file, "\t\t\tTag0 \tAnc%i\tAnc%i\tAnc%i\tAnc%i\n", pk1000->anchors[0].id, pk1000->anchors[1].id, pk1000->anchors[2].id, pk1000->anchors[3].id);
-            fprintf(file, "Range(cm)\t\t\t%i\t%i\t%i\t\t%i\n",pk1000->tags[0].distance, pk1000->tags[1].distance, pk1000->tags[2].distance, pk1000->tags[3].distance);
-            fprintf(file, "X(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n", pk1000->tag.x, pk1000->anchors[0].x, pk1000->anchors[1].x, pk1000->anchors[2].x, pk1000->anchors[3].x);
-            fprintf(file, "Y(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n", pk1000->tag.y, pk1000->anchors[0].y, pk1000->anchors[1].y, pk1000->anchors[2].y, pk1000->anchors[3].y);
-            fprintf(file, "Z(cm)\t\t%i\t%i\t%i\t%i\t\t%i\n\n", pk1000->tag.z, pk1000->anchors[0].z, pk1000->anchors[1].z, pk1000->anchors[2].z, pk1000->anchors[3].z);
-             */
+        if(app->print_sample_data) {
+            pk1000_t pk1000;
+            pk1000.frame_header = to_int(buffer[0], buffer[1]);
+            pk1000.tag.id = (buffer[3] & 0xff) << 8;
+            pk1000.tag.x = to_int(buffer[3], buffer[4]);
+            pk1000.tag.y = to_int(buffer[5], buffer[6]);
+            pk1000.tag.z = to_int(buffer[7], buffer[8]);
+
+            pk1000.anchors[0].id = (buffer[9] & 0xff) << 8;
+            pk1000.anchors[0].distance = to_int(buffer[10], buffer[11]);
+            pk1000.anchors[0].x = to_int(buffer[22], buffer[23]);
+            pk1000.anchors[0].y = to_int(buffer[24], buffer[25]);
+            pk1000.anchors[0].z = to_int(buffer[26], buffer[27]);
+
+            pk1000.anchors[1].id = (buffer[12] & 0xff) << 8;
+            pk1000.anchors[1].distance = to_int(buffer[13], buffer[14]);
+            pk1000.anchors[1].x = to_int(buffer[29], buffer[30]);
+            pk1000.anchors[1].y = to_int(buffer[31], buffer[32]);
+            pk1000.anchors[1].z = to_int(buffer[33], buffer[34]);
+
+            pk1000.anchors[2].id = (buffer[15] & 0xff) << 8;
+            pk1000.anchors[2].distance = to_int(buffer[16], buffer[17]);
+            pk1000.anchors[2].x = to_int(buffer[36], buffer[37]);
+            pk1000.anchors[2].y = to_int(buffer[38], buffer[39]);
+            pk1000.anchors[2].z = to_int(buffer[40], buffer[41]);
+
+            pk1000.anchors[3].id = (buffer[18] & 0xff) << 8;
+            pk1000.anchors[3].distance = to_int(buffer[19], buffer[20]);
+            pk1000.anchors[3].x = to_int(buffer[43], buffer[44]);
+            pk1000.anchors[3].y = to_int(buffer[45], buffer[46]);
+            pk1000.anchors[3].z = to_int(buffer[47], buffer[48]);
+
+            pk1000.counts = (buffer[49] & 0xff) << 8;
+            pk1000.frame_footer = to_int(buffer[50], buffer[51]);
+
+            fprintf(file, "\t\tTag0 \t\tAnc0\t\tAnc1\t\tAnc2\t\tAnc3\n"); //, pk1000.anchors[0].id, pk1000.anchors[1].id, pk1000.anchors[2].id, pk1000.anchors[3].id);
+            fprintf(file, "Range(cm)\t\t\t%i\t\t%i\t\t%i\t\t%i\n",pk1000.anchors[0].distance, pk1000.anchors[1].distance, pk1000.anchors[2].distance, pk1000.anchors[3].distance);
+            fprintf(file, "X(cm)\t\t%i\t\t%i\t\t%i\t\t%i\t\t%i\n", pk1000.tag.x, pk1000.anchors[0].x, pk1000.anchors[1].x, pk1000.anchors[2].x, pk1000.anchors[3].x);
+            fprintf(file, "Y(cm)\t\t%i\t\t%i\t\t%i\t\t%i\t\t%i\n", pk1000.tag.y, pk1000.anchors[0].y, pk1000.anchors[1].y, pk1000.anchors[2].y, pk1000.anchors[3].y);
+            fprintf(file, "Z(cm)\t\t%i\t\t%i\t\t%i\t\t%i\t\t%i\n\n", pk1000.tag.z, pk1000.anchors[0].z, pk1000.anchors[1].z, pk1000.anchors[2].z, pk1000.anchors[3].z);
         }
         if(app->num_samples_terminate > 0) {
             if(num_samples >= app->num_samples_terminate) {
@@ -165,15 +238,14 @@ void console(int sockfd) {
 }
 
 int connect_pk1000(struct application *app) {
-    struct sockaddr_in serv_addr;
-
     app->sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(app->port);
     serv_addr.sin_addr.s_addr = inet_addr(app->host);
 
+    fprintf(file, "Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
 
-    printf("Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
     connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
     pthread_create(&receiver_thread, NULL, receiver, app);//(void*)&sockfd);
     console(app->sockfd);
@@ -184,7 +256,7 @@ int connect_pk1000(struct application *app) {
 void init_application(struct application *app, int argc, char **argv) {
     app->num_samples_terminate = 0;
     app->connect_to_pk1000 = 0;
-    app->sample_data = 0;
+    app->print_raw_sample = 0;
     app->sockfd = 0;
     app->port = 8080;
     app->host = "192.168.0.19";
@@ -192,7 +264,7 @@ void init_application(struct application *app, int argc, char **argv) {
     app->verbose = 0;
 
     int opt;
-    while((opt = getopt(argc, argv, "cith:p:n:vf")) != -1) {
+    while((opt = getopt(argc, argv, "cirh:p:n:vf")) != -1) {
         switch(opt) {
             case 'c':
                 app->connect_to_pk1000 = 1;
@@ -201,13 +273,10 @@ void init_application(struct application *app, int argc, char **argv) {
                 app->port = atoi(optarg);
                 fprintf(stdout, "Settings changed, port: %i\n", app->port);
                 break;
-            case 'i':
-                app->sample_data = 1;
-                fprintf(stdout, "Settings changed, sample_data: %i\n", app->sample_data);
+            case 'r':
+                app->print_raw_sample = 1;
+                fprintf(stdout, "Settings changed, print_raw_sample: %i\n", app->print_raw_sample);
                 break;
-            case 't':
-                test_casting();
-                exit(EXIT_SUCCESS);
             case 'h':
                 app->connect_to_pk1000 = 1;
                 app->host = strdup(optarg);
@@ -221,9 +290,9 @@ void init_application(struct application *app, int argc, char **argv) {
                 app->verbose = 1;
                 fprintf(stdout, "Settings changed, verbose: %i\n", app->verbose);
                 break;
-            case 'f':
-                app->frame_info = 1;
-                fprintf(stdout, "Settings changed, frame_info: %i\n", app->frame_info);
+            case 'i':
+                app->print_sample_data = 1;
+                fprintf(stdout, "Settings changed, print_sample_data: %i\n", app->print_sample_data);
                 break;
             default:
                 usage();
@@ -232,97 +301,12 @@ void init_application(struct application *app, int argc, char **argv) {
     }
 }
 
-int16_t to_int(int8_t a, int8_t b) {
-    return ((a & 0xff) << 8) | (b & 0xff);
-}
-
-pk1000_t make_pk1000(int8_t bytes[]) {
-    pk1000_t pk1000;
-    pk1000.frame_header = to_int(bytes[0], bytes[1]);
-
-    pk1000.tag = make_position(&bytes[3]);
-    return pk1000;
-}
-
-position_t make_position(int8_t bytes[]) {
-    position_t position;
-    position.id = (bytes[0] & 0xff) << 8;
-    position.x = to_int(bytes[1], bytes[2]);
-    position.y = to_int(bytes[3], bytes[4]);
-    position.z = to_int(bytes[5], bytes[6]);
-    return position;
-}
-
-distance_t make_distance(int8_t bytes[]) {
-    distance_t distance;
-    distance.id = bytes[0];
-    distance.distance = to_int(bytes[1], bytes[2]);
-    return distance;
-}
-
-typedef struct foo{
-    int16_t x;
-    int16_t y;
-    int16_t z;
-};
-
 int main(int argc, char **argv) {
     struct application app;
     init_application(&app, argc, argv);
 
     if(argc == 1)
         usage();
-
-    int8_t buffer[] = { 0x37, 0x38, // Frame header
-                        0x00,       // Tag ID
-                        0x01, 0x1c, // X
-                        0x01, 0x1e, // Y
-                        0xff, 0xc5, // Z
-
-                        0x00,       // Anchor ID 0
-                        0x02, 0x19, // Distance to tag
-                        0x01,       // Anchor ID 1
-                        0x01, 0x27, // Distance to tag
-                        0x02,       // Anchor ID 2
-                        0x00, 0x39, // Distance to tag
-                        0x03,       // Anchor ID 3
-                        0x00, 0x8B, // Distance to tag
-
-                        0x00,       // Anchor ID 0
-                        0x00, 0x00, // X
-                        0x00, 0x00, // Y
-                        0x00, 0x00, // Z
-
-                        0x01,       // Anchor ID 1
-                        0x00, 0x00, // X
-                        0x00, 0x00, // Y
-                        0x00, 0x00, // Z
-
-                        0x02,       // Anchor ID 2
-                        0x00, 0x00, // X
-                        0x00, 0x00, // Y
-                        0x00, 0x00, // Z
-
-                        0x03,       // Anchor ID 3
-                        0x00, 0x00, // X
-                        0x00, 0x00, // Y
-                        0x00, 0x00, // Z
-
-                        0x34,       // Counter
-                        0x27, 0x28  // Frame footer
-    };
-    pk1000_t pk1000 = make_pk1000(buffer);
-
-    int8_t buffer2[] = {0x01, 0x00, 0xfe, 0xb9, 0x01, 0x53};
-    int16_t x = to_int(buffer2[0], buffer2[1]);
-    int16_t y = to_int(buffer2[2], buffer2[3]);
-    int16_t z = to_int(buffer2[4], buffer2[5]);
-
-
-    //int8_t buffer2[] = { 0x00, 0x01, 0x1c, 0x01, 0x1d, 0xff, 0xc4 };
-    //distance_t distance = make_distance(&buffer2);
-    //int8_t buffer[] = { 0x37, 0x38, 0x00, 0x01, 0x1c, 0x01, 0x1d, 0xff, 0xc4 };
-    //pk1000_t pk1000 = make_pk1000(&buffer);
 
     app.filename = argc <= optind ? "-" : argv[optind];
     if(strcmp(app.filename, "-") == 0) {

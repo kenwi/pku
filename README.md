@@ -62,7 +62,7 @@ Connecting to PK-1000 system host: 127.0.0.1, port: 8080
 kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -n 10 -f
 Settings changed, host: 127.0.0.1
 Settings changed, num_samples_terminate: 10
-Settings changed, frame_info: 1
+Settings changed, print_sample_data: 1
 Connecting to PK-1000 system host: 127.0.0.1, port: 8080
 2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
 2017-09-20, 14:36:23: Frame header: 3837, footer: 2827
