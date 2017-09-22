@@ -78,7 +78,7 @@ Z(cm)		125		50		50		50		50
 ```
 
 ### Verbose output will print status of received sample, number collected and the two first bytes ###
-``bash
+```bash
 kenwi@wardenclyffe:~/git/pku/build$ ./pku -h 127.0.0.1 -v -n 3
 Settings changed, host: 127.0.0.1
 Settings changed, verbose: 1
