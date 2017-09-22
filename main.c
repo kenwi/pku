@@ -21,7 +21,7 @@ struct application {
     int print_raw_sample;
     int port;
     int sockfd;
-    int verbose;
+    int print_warnings;
     int print_sample_data;
 
     char *host;
@@ -106,10 +106,10 @@ void usage() {
     printf("pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.\n\n"
            "Usage:\tpku [-options] filename\n"
             "\t[-c connects with default settings]\n"
-            "\t[-r print sample hex]\n"
             "\t[-i print sample data]\n"
+            "\t[-x print sample data as hex]\n"
             "\t[-n collect n samples and terminate]\n"
-            "\t[-v verbose output]\n"
+            "\t[-w output warnings]\n"
             "\t[-h host (default: 192.168.0.19)]\n"
             "\t[-p port (default: 8080)]\n"
             "\tfilename (default: '-' dumps samples to stdout)\n"
@@ -150,11 +150,11 @@ void *receiver(void *sfd) {
         num_samples = readlen/sizeof(pk1000_t);
         total_samples += num_samples;
         if(num_samples > 1) {
-            if(app->verbose == 1) {
+            if(app->print_warnings == 1) {
                 fprintf(file, "%s: WARNING: more than 1 sample received [%i]\n", t_str, num_samples);
             }
             /*
-            if(app->verbose == 1) {
+            if(app->print_warnings == 1) {
                 fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex 0: %02X, hex 1: %02X status: %s\n", t_str, total_samples,  (int)readlen, buffer[0], buffer[1], readlen == 52 ? "OK" : "BAD");
             }*/
         }
@@ -228,10 +228,10 @@ void init_application(struct application *app, int argc, char **argv) {
     app->port = 8080;
     app->host = "192.168.0.19";
     app->filename = "-";
-    app->verbose = 0;
+    app->print_warnings = 0;
 
     int opt;
-    while((opt = getopt(argc, argv, "cirh:p:n:v")) != -1) {
+    while((opt = getopt(argc, argv, "cixh:p:n:w")) != -1) {
         switch(opt) {
             case 'c':
                 app->connect_to_pk1000 = 1;
@@ -240,7 +240,7 @@ void init_application(struct application *app, int argc, char **argv) {
                 app->port = atoi(optarg);
                 fprintf(stdout, "Settings changed, port: %i\n", app->port);
                 break;
-            case 'r':
+            case 'x':
                 app->print_raw_sample = 1;
                 fprintf(stdout, "Settings changed, print_raw_sample: %i\n", app->print_raw_sample);
                 break;
@@ -253,9 +253,9 @@ void init_application(struct application *app, int argc, char **argv) {
                 app->num_samples_terminate = atoi(optarg);
                 fprintf(stdout, "Settings changed, num_samples_terminate: %i\n", app->num_samples_terminate);
                 break;
-            case 'v':
-                app->verbose = 1;
-                fprintf(stdout, "Settings changed, verbose: %i\n", app->verbose);
+            case 'w':
+                app->print_warnings = 1;
+                fprintf(stdout, "Settings changed, print_warnings: %i\n", app->print_warnings);
                 break;
             case 'i':
                 app->print_sample_data = 1;
