@@ -10,47 +10,6 @@
 
 #include "pk1000.h"
 
-/*  BYTES               FLAG            NUM
-int8_t buffer[] = {
-        0x37, 0x38, // Frame header     0 1
-        0x00,       // Tag ID           2
-        0x01, 0x1c, // X                3 4
-        0x01, 0x1e, // Y                5 6
-        0xff, 0xc5, // Z                7 8
-
-        0x00,       // Anchor ID 0 9    9
-        0x02, 0x19, // Distance to tag  10 11
-        0x01,       // Anchor ID 1      12
-        0x01, 0x27, // Distance to tag  13 14
-        0x02,       // Anchor ID 2      15
-        0x00, 0x39, // Distance to tag  16 17
-        0x03,       // Anchor ID 3      18
-        0x00, 0x8B, // Distance to tag  19 20
-
-        0x00,       // Anchor ID 0      21
-        0x00, 0x00, // X                22 23
-        0x00, 0x00, // Y                24 25
-        0x00, 0x00, // Z                26 27
-
-        0x01,       // Anchor ID 1 28   28
-        0x00, 0x00, // X                29 30
-        0x00, 0x00, // Y                31 32
-        0x00, 0x00, // Z                33 34
-
-        0x02,       // Anchor ID 2      35
-        0x00, 0x00, // X                36 37
-        0x00, 0x00, // Y                38 39
-        0x00, 0x00, // Z                40 41
-
-        0x03,       // Anchor ID 3      42
-        0x00, 0x00, // X                43 44
-        0x00, 0x00, // Y                45 46
-        0x00, 0x00, // Z                47 48
-
-        0x34,       // Counter          49
-        0x27, 0x28  // Frame footer     50 51
-};*/
-
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
 pthread_t receiver_thread;
@@ -70,25 +29,53 @@ struct application {
 };
 
 void usage();
-void test_casting();
 char getTime(char *str);
 void *receiver(void *sfd);
 void console(int sockfd);
-int connect_pk1000(struct application *app);
 void init_application(struct application *app, int argc, char **argv);
+int connect_pk1000(struct application *app);
 
 int16_t to_int(int8_t a, int8_t b) {
     return ((a & 0xff) << 8) | (b & 0xff);
 }
-/*
-pk1000_t make_pk1000(int8_t bytes[]) {
-    pk1000_t pk1000;
-    pk1000.frame_header = to_int(bytes[0], bytes[1]);
 
-    pk1000.tag = make_position(&bytes[3]);
+pk1000_t make_pk1000(int8_t buffer[]) {
+    pk1000_t pk1000;
+    pk1000.frame_header = to_int(buffer[0], buffer[1]);
+    pk1000.tag.id = buffer[3];//(buffer[3] & 0xff) << 8;
+    pk1000.tag.x = to_int(buffer[3], buffer[4]);
+    pk1000.tag.y = to_int(buffer[5], buffer[6]);
+    pk1000.tag.z = to_int(buffer[7], buffer[8]);
+
+    pk1000.anchors[0].id = buffer[9];//(buffer[9] & 0xff) << 8;
+    pk1000.anchors[0].distance = to_int(buffer[10], buffer[11]);
+    pk1000.anchors[0].x = to_int(buffer[22], buffer[23]);
+    pk1000.anchors[0].y = to_int(buffer[24], buffer[25]);
+    pk1000.anchors[0].z = to_int(buffer[26], buffer[27]);
+
+    pk1000.anchors[1].id = buffer[12];//(buffer[12] & 0xff) << 8;
+    pk1000.anchors[1].distance = to_int(buffer[13], buffer[14]);
+    pk1000.anchors[1].x = to_int(buffer[29], buffer[30]);
+    pk1000.anchors[1].y = to_int(buffer[31], buffer[32]);
+    pk1000.anchors[1].z = to_int(buffer[33], buffer[34]);
+
+    pk1000.anchors[2].id = buffer[15];//(buffer[15] & 0xff) << 8;
+    pk1000.anchors[2].distance = to_int(buffer[16], buffer[17]);
+    pk1000.anchors[2].x = to_int(buffer[36], buffer[37]);
+    pk1000.anchors[2].y = to_int(buffer[38], buffer[39]);
+    pk1000.anchors[2].z = to_int(buffer[40], buffer[41]);
+
+    pk1000.anchors[3].id = buffer[18];//(buffer[18] & 0xff) << 8;
+    pk1000.anchors[3].distance = to_int(buffer[19], buffer[20]);
+    pk1000.anchors[3].x = to_int(buffer[43], buffer[44]);
+    pk1000.anchors[3].y = to_int(buffer[45], buffer[46]);
+    pk1000.anchors[3].z = to_int(buffer[47], buffer[48]);
+
+    pk1000.counts = buffer[49];//(buffer[49] & 0xff) << 8;
+    pk1000.frame_footer = to_int(buffer[50], buffer[51]);
     return pk1000;
 }
-
+/*
 position_t make_position(int8_t bytes[]) {
     position_t position;
     position.id = (bytes[0] & 0xff) << 8;
@@ -134,6 +121,7 @@ void *receiver(void *sfd) {
     struct application *app = (struct application*)sfd;
 
     int8_t buffer[BUFF_SIZE] = {0};
+    int total_samples = 0;
     int num_samples = 0;
     int run = 1;
     ssize_t readlen;
@@ -150,12 +138,17 @@ void *receiver(void *sfd) {
             close(app->sockfd);
             pthread_exit(0);
         }
-        num_samples += readlen/52;
-
-        if(app->verbose == 1) {
-            fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex 0: %02X, hex 1: %02X status: %s\n", t_str, num_samples,  (int)readlen, buffer[0], buffer[1], readlen == 52 ? "OK" : "BAD");
+        num_samples = readlen/sizeof(pk1000_t);
+        total_samples += num_samples;
+        if(num_samples > 1) {
+            if(app->verbose == 1) {
+                fprintf(file, "%s: WARNING: more than 1 sample received [%i]\n", t_str, num_samples);
+            }
+            /*
+            if(app->verbose == 1) {
+                fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex 0: %02X, hex 1: %02X status: %s\n", t_str, total_samples,  (int)readlen, buffer[0], buffer[1], readlen == 52 ? "OK" : "BAD");
+            }*/
         }
-
         if(app->print_raw_sample == 1) {
             fprintf(file, "%s: ", t_str);
             for(int i=0; i<readlen; i+=2) {
@@ -163,51 +156,17 @@ void *receiver(void *sfd) {
             }
             fprintf(file, "\n");
         }
-
         if(app->print_sample_data == 1) {
-            pk1000_t pk1000;
-            pk1000.frame_header = to_int(buffer[0], buffer[1]);
-            pk1000.tag.id = (buffer[3] & 0xff) << 8;
-            pk1000.tag.x = to_int(buffer[3], buffer[4]);
-            pk1000.tag.y = to_int(buffer[5], buffer[6]);
-            pk1000.tag.z = to_int(buffer[7], buffer[8]);
-
-            pk1000.anchors[0].id = (buffer[9] & 0xff) << 8;
-            pk1000.anchors[0].distance = to_int(buffer[10], buffer[11]);
-            pk1000.anchors[0].x = to_int(buffer[22], buffer[23]);
-            pk1000.anchors[0].y = to_int(buffer[24], buffer[25]);
-            pk1000.anchors[0].z = to_int(buffer[26], buffer[27]);
-
-            pk1000.anchors[1].id = (buffer[12] & 0xff) << 8;
-            pk1000.anchors[1].distance = to_int(buffer[13], buffer[14]);
-            pk1000.anchors[1].x = to_int(buffer[29], buffer[30]);
-            pk1000.anchors[1].y = to_int(buffer[31], buffer[32]);
-            pk1000.anchors[1].z = to_int(buffer[33], buffer[34]);
-
-            pk1000.anchors[2].id = (buffer[15] & 0xff) << 8;
-            pk1000.anchors[2].distance = to_int(buffer[16], buffer[17]);
-            pk1000.anchors[2].x = to_int(buffer[36], buffer[37]);
-            pk1000.anchors[2].y = to_int(buffer[38], buffer[39]);
-            pk1000.anchors[2].z = to_int(buffer[40], buffer[41]);
-
-            pk1000.anchors[3].id = (buffer[18] & 0xff) << 8;
-            pk1000.anchors[3].distance = to_int(buffer[19], buffer[20]);
-            pk1000.anchors[3].x = to_int(buffer[43], buffer[44]);
-            pk1000.anchors[3].y = to_int(buffer[45], buffer[46]);
-            pk1000.anchors[3].z = to_int(buffer[47], buffer[48]);
-
-            pk1000.counts = (buffer[49] & 0xff) << 8;
-            pk1000.frame_footer = to_int(buffer[50], buffer[51]);
-
-            fprintf(file, "\t\tTag0 \t\tAnc0\t\tAnc1\t\tAnc2\t\tAnc3\n"); //, pk1000.anchors[0].id, pk1000.anchors[1].id, pk1000.anchors[2].id, pk1000.anchors[3].id);
+            pk1000_t pk1000 = make_pk1000(buffer);
+            fprintf(file, "\t\tTag0 \t\tAnc%i\t\tAnc%i\t\tAnc%i\t\tAnc%i\n", pk1000.anchors[0].id, pk1000.anchors[1].id, pk1000.anchors[2].id, pk1000.anchors[3].id);
             fprintf(file, "Range(cm)\t\t\t%i\t\t%i\t\t%i\t\t%i\n",pk1000.anchors[0].distance, pk1000.anchors[1].distance, pk1000.anchors[2].distance, pk1000.anchors[3].distance);
             fprintf(file, "X(cm)\t\t%i\t\t%i\t\t%i\t\t%i\t\t%i\n", pk1000.tag.x, pk1000.anchors[0].x, pk1000.anchors[1].x, pk1000.anchors[2].x, pk1000.anchors[3].x);
             fprintf(file, "Y(cm)\t\t%i\t\t%i\t\t%i\t\t%i\t\t%i\n", pk1000.tag.y, pk1000.anchors[0].y, pk1000.anchors[1].y, pk1000.anchors[2].y, pk1000.anchors[3].y);
             fprintf(file, "Z(cm)\t\t%i\t\t%i\t\t%i\t\t%i\t\t%i\n\n", pk1000.tag.z, pk1000.anchors[0].z, pk1000.anchors[1].z, pk1000.anchors[2].z, pk1000.anchors[3].z);
         }
         if(app->num_samples_terminate > 0) {
-            if(num_samples >= app->num_samples_terminate) {
-                fprintf(file, "%s: Max number of samples collected: %i. Terminating.\n", t_str, num_samples);
+            if(total_samples >= app->num_samples_terminate) {
+                fprintf(file, "%s: Max number of samples collected: %i. Terminating.\n", t_str, total_samples);
                 close(app->sockfd);
                 pthread_exit(0);
             }
