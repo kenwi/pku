@@ -35,44 +35,44 @@ void console(int sockfd);
 void init_application(struct application *app, int argc, char **argv);
 int connect_pk1000(struct application *app);
 
-int16_t to_int(int8_t a, int8_t b) {
+int16_t to_int16(int8_t a, int8_t b) {
     return ((a & 0xff) << 8) | (b & 0xff);
 }
 
 pk1000_t make_pk1000(int8_t buffer[]) {
     pk1000_t pk1000;
-    pk1000.frame_header = to_int(buffer[0], buffer[1]);
+    pk1000.frame_header = to_int16(buffer[0], buffer[1]);
     pk1000.tag.id = buffer[3];//(buffer[3] & 0xff) << 8;
-    pk1000.tag.x = to_int(buffer[3], buffer[4]);
-    pk1000.tag.y = to_int(buffer[5], buffer[6]);
-    pk1000.tag.z = to_int(buffer[7], buffer[8]);
+    pk1000.tag.x = to_int16(buffer[3], buffer[4]);
+    pk1000.tag.y = to_int16(buffer[5], buffer[6]);
+    pk1000.tag.z = to_int16(buffer[7], buffer[8]);
 
     pk1000.anchors[0].id = buffer[9];//(buffer[9] & 0xff) << 8;
-    pk1000.anchors[0].distance = to_int(buffer[10], buffer[11]);
-    pk1000.anchors[0].x = to_int(buffer[22], buffer[23]);
-    pk1000.anchors[0].y = to_int(buffer[24], buffer[25]);
-    pk1000.anchors[0].z = to_int(buffer[26], buffer[27]);
+    pk1000.anchors[0].distance = to_int16(buffer[10], buffer[11]);
+    pk1000.anchors[0].x = to_int16(buffer[22], buffer[23]);
+    pk1000.anchors[0].y = to_int16(buffer[24], buffer[25]);
+    pk1000.anchors[0].z = to_int16(buffer[26], buffer[27]);
 
     pk1000.anchors[1].id = buffer[12];//(buffer[12] & 0xff) << 8;
-    pk1000.anchors[1].distance = to_int(buffer[13], buffer[14]);
-    pk1000.anchors[1].x = to_int(buffer[29], buffer[30]);
-    pk1000.anchors[1].y = to_int(buffer[31], buffer[32]);
-    pk1000.anchors[1].z = to_int(buffer[33], buffer[34]);
+    pk1000.anchors[1].distance = to_int16(buffer[13], buffer[14]);
+    pk1000.anchors[1].x = to_int16(buffer[29], buffer[30]);
+    pk1000.anchors[1].y = to_int16(buffer[31], buffer[32]);
+    pk1000.anchors[1].z = to_int16(buffer[33], buffer[34]);
 
     pk1000.anchors[2].id = buffer[15];//(buffer[15] & 0xff) << 8;
-    pk1000.anchors[2].distance = to_int(buffer[16], buffer[17]);
-    pk1000.anchors[2].x = to_int(buffer[36], buffer[37]);
-    pk1000.anchors[2].y = to_int(buffer[38], buffer[39]);
-    pk1000.anchors[2].z = to_int(buffer[40], buffer[41]);
+    pk1000.anchors[2].distance = to_int16(buffer[16], buffer[17]);
+    pk1000.anchors[2].x = to_int16(buffer[36], buffer[37]);
+    pk1000.anchors[2].y = to_int16(buffer[38], buffer[39]);
+    pk1000.anchors[2].z = to_int16(buffer[40], buffer[41]);
 
     pk1000.anchors[3].id = buffer[18];//(buffer[18] & 0xff) << 8;
-    pk1000.anchors[3].distance = to_int(buffer[19], buffer[20]);
-    pk1000.anchors[3].x = to_int(buffer[43], buffer[44]);
-    pk1000.anchors[3].y = to_int(buffer[45], buffer[46]);
-    pk1000.anchors[3].z = to_int(buffer[47], buffer[48]);
+    pk1000.anchors[3].distance = to_int16(buffer[19], buffer[20]);
+    pk1000.anchors[3].x = to_int16(buffer[43], buffer[44]);
+    pk1000.anchors[3].y = to_int16(buffer[45], buffer[46]);
+    pk1000.anchors[3].z = to_int16(buffer[47], buffer[48]);
 
     pk1000.counts = buffer[49];//(buffer[49] & 0xff) << 8;
-    pk1000.frame_footer = to_int(buffer[50], buffer[51]);
+    pk1000.frame_footer = to_int16(buffer[50], buffer[51]);
     return pk1000;
 }
 /*
@@ -88,7 +88,7 @@ position_t make_position(int8_t bytes[]) {
 distance_t make_distance(int8_t bytes[]) {
     distance_t distance;
     distance.id = bytes[0];
-    distance.distance = to_int(bytes[1], bytes[2]);
+    distance.distance = to_int16(bytes[1], bytes[2]);
     return distance;
 }
 */
