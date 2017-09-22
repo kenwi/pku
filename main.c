@@ -112,7 +112,6 @@ void usage() {
             "\t[-c connects with default settings]\n"
             "\t[-r print sample hex]\n"
             "\t[-i print sample data]\n"
-            //"\t[-t test casting]\n"
             "\t[-n collect n samples and terminate]\n"
             "\t[-v verbose output]\n"
             "\t[-h host (default: 192.168.0.19)]\n"
@@ -153,11 +152,11 @@ void *receiver(void *sfd) {
         }
         num_samples += readlen/52;
 
-        if(app->verbose) {
+        if(app->verbose == 1) {
             fprintf(file, "%s: Sample [%i] received. length: %i bytes, hex 0: %02X, hex 1: %02X status: %s\n", t_str, num_samples,  (int)readlen, buffer[0], buffer[1], readlen == 52 ? "OK" : "BAD");
         }
 
-        if(app->print_raw_sample) {
+        if(app->print_raw_sample == 1) {
             fprintf(file, "%s: ", t_str);
             for(int i=0; i<readlen; i+=2) {
                 fprintf(file, "%02x%02x ", buffer[i], buffer[i+1]);
@@ -165,7 +164,7 @@ void *receiver(void *sfd) {
             fprintf(file, "\n");
         }
 
-        if(app->print_sample_data) {
+        if(app->print_sample_data == 1) {
             pk1000_t pk1000;
             pk1000.frame_header = to_int(buffer[0], buffer[1]);
             pk1000.tag.id = (buffer[3] & 0xff) << 8;
@@ -264,7 +263,7 @@ void init_application(struct application *app, int argc, char **argv) {
     app->verbose = 0;
 
     int opt;
-    while((opt = getopt(argc, argv, "cirh:p:n:vf")) != -1) {
+    while((opt = getopt(argc, argv, "cirh:p:n:v")) != -1) {
         switch(opt) {
             case 'c':
                 app->connect_to_pk1000 = 1;
