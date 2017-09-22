@@ -47,6 +47,15 @@ pk1000_t make_pk1000(int8_t buffer[]) {
     pk1000.tag.y = to_int16(buffer[5], buffer[6]);
     pk1000.tag.z = to_int16(buffer[7], buffer[8]);
 
+    /* Refactor this
+    for(int i = 0; i<4; i++) {
+        pk1000.anchors[i].id = buffer[9+3*i];
+        pk1000.anchors[i].distance = to_int16(buffer[10+3*i], buffer[10+3*i+1]);
+        pk1000.anchors[i].x = to_int16(buffer[22+6*i], buffer[23+6*i]);
+        pk1000.anchors[i].y = to_int16(buffer[24+6*i], buffer[25+6*i]);
+        pk1000.anchors[i].z = to_int16(buffer[26+6*i], buffer[27+6*i]);
+    }*/
+
     pk1000.anchors[0].id = buffer[9];//(buffer[9] & 0xff) << 8;
     pk1000.anchors[0].distance = to_int16(buffer[10], buffer[11]);
     pk1000.anchors[0].x = to_int16(buffer[22], buffer[23]);
@@ -261,10 +270,7 @@ void init_application(struct application *app, int argc, char **argv) {
 
 int main(int argc, char **argv) {
     struct application app;
-    init_application(&app, argc, argv);
-
-    if(argc == 1)
-        usage();
+    argc == 1 ? usage() : init_application(&app, argc, argv);
 
     app.filename = argc <= optind ? "-" : argv[optind];
     if(strcmp(app.filename, "-") == 0) {
