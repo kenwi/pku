@@ -40,7 +40,7 @@ void console(int sockfd);
 void init_application(struct application *app, int argc, char **argv);
 int connect_pk1000(struct application *app);
 void init_sfml();
-void run_sfml();
+void run_sfml(struct application *app);
 
 int16_t to_int16(int8_t a, int8_t b) {
     return ((a & 0xff) << 8) | (b & 0xff);
@@ -218,12 +218,12 @@ int connect_pk1000(struct application *app) {
     serv_addr.sin_port = htons(app->port);
     serv_addr.sin_addr.s_addr = inet_addr(app->host);
 
-    fprintf(file, "Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
+    //fprintf(file, "Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
 
     connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
-    pthread_create(&receiver_thread, NULL, receiver, app);//(void*)&sockfd);
+    //pthread_create(&receiver_thread, NULL, receiver, app);//(void*)&sockfd);
     //console(app->sockfd);
-    run_sfml();
+
 
     return app->sockfd;
 }
@@ -285,17 +285,26 @@ void init_sfml() {
     App = sfRenderWindow_create(mode, "pku", sfClose, NULL);
 }
 
-void run_sfml() {
+void run_sfml(struct application *app) {
+    int8_t buffer[BUFF_SIZE] = {0};
+    ssize_t readlen;
+
     while(sfRenderWindow_isOpen(App)) {
         while( sfRenderWindow_pollEvent(App, &event) ) {
             if( event.type == sfEvtClosed || (event.type == sfEvtKeyPressed && event.key.code == sfKeyEscape) ) {
                 sfRenderWindow_close(App);
             }
-
-            sfRenderWindow_clear(App, sfBlue);
-            sfRenderWindow_display(App);
         }
 
+        sfRenderWindow_clear(App, sfBlue);
+
+        memset(buffer, 0, sizeof buffer);
+        readlen = read(app->sockfd, buffer, sizeof buffer);
+        pk1000_t pk1000 = make_pk1000(buffer);
+        fprintf(file, "%i\n", pk1000.counts);
+
+
+        sfRenderWindow_display(App);
     }
 }
 
@@ -318,6 +327,9 @@ int main(int argc, char **argv) {
     if(app.connect_to_pk1000) {
         connect_pk1000(&app);
     }
+    run_sfml(&app);
+
+
 
     /* cleanup */
     if(file != stdout) {
