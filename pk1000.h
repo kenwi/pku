@@ -53,10 +53,6 @@ int8_t buffer[] = {
 };*/
 
 typedef struct {
-    int16_t distance;
-} distance_t;
-
-typedef struct {
     int8_t id;
     int16_t x;
     int16_t y;
