@@ -8,6 +8,11 @@
 #include <arpa/inet.h>
 #include <getopt.h>
 
+#include <SFML/System.h>
+#include <SFML/Window.h>
+#include <SFML/Graphics.h>
+#include <SFML/OpenGL.h>
+
 #include "pk1000.h"
 
 pthread_cond_t console_cv;
@@ -34,6 +39,8 @@ void *receiver(void *sfd);
 void console(int sockfd);
 void init_application(struct application *app, int argc, char **argv);
 int connect_pk1000(struct application *app);
+void init_sfml();
+void run_sfml();
 
 int16_t to_int16(int8_t a, int8_t b) {
     return ((a & 0xff) << 8) | (b & 0xff);
@@ -215,7 +222,8 @@ int connect_pk1000(struct application *app) {
 
     connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
     pthread_create(&receiver_thread, NULL, receiver, app);//(void*)&sockfd);
-    console(app->sockfd);
+    //console(app->sockfd);
+    run_sfml();
 
     return app->sockfd;
 }
@@ -268,9 +276,33 @@ void init_application(struct application *app, int argc, char **argv) {
     }
 }
 
+sfEvent event;
+sfRenderWindow* App;
+void init_sfml() {
+    const int width = 700, height = 500;
+
+    sfVideoMode mode = {width, height, 32};
+    App = sfRenderWindow_create(mode, "pku", sfClose, NULL);
+}
+
+void run_sfml() {
+    while(sfRenderWindow_isOpen(App)) {
+        while( sfRenderWindow_pollEvent(App, &event) ) {
+            if( event.type == sfEvtClosed || (event.type == sfEvtKeyPressed && event.key.code == sfKeyEscape) ) {
+                sfRenderWindow_close(App);
+            }
+
+            sfRenderWindow_clear(App, sfBlue);
+            sfRenderWindow_display(App);
+        }
+
+    }
+}
+
 int main(int argc, char **argv) {
     struct application app;
     argc == 1 ? usage() : init_application(&app, argc, argv);
+    init_sfml();
 
     app.filename = argc <= optind ? "-" : argv[optind];
     if(strcmp(app.filename, "-") == 0) {
