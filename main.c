@@ -31,6 +31,8 @@ struct application {
 
     char *host;
     char *filename;
+    sfEvent event;
+    sfRenderWindow* renderWindow;
 };
 
 void usage();
@@ -39,7 +41,7 @@ void *receiver(void *sfd);
 void console(int sockfd);
 void init_application(struct application *app, int argc, char **argv);
 int connect_pk1000(struct application *app);
-void init_sfml();
+void init_sfml(struct application *ap);
 void run_sfml(struct application *app);
 
 int16_t to_int16(int8_t a, int8_t b) {
@@ -276,27 +278,26 @@ void init_application(struct application *app, int argc, char **argv) {
     }
 }
 
-sfEvent event;
-sfRenderWindow* App;
-void init_sfml() {
+
+void init_sfml(struct application *app) {
     const int width = 700, height = 500;
 
     sfVideoMode mode = {width, height, 32};
-    App = sfRenderWindow_create(mode, "pku", sfClose, NULL);
+    app->renderWindow = sfRenderWindow_create(mode, "pku", sfClose, NULL);
 }
 
 void run_sfml(struct application *app) {
     int8_t buffer[BUFF_SIZE] = {0};
     ssize_t readlen;
 
-    while(sfRenderWindow_isOpen(App)) {
-        while( sfRenderWindow_pollEvent(App, &event) ) {
-            if( event.type == sfEvtClosed || (event.type == sfEvtKeyPressed && event.key.code == sfKeyEscape) ) {
-                sfRenderWindow_close(App);
+    while(sfRenderWindow_isOpen(app->renderWindow)) {
+        while( sfRenderWindow_pollEvent(app->renderWindow, &app->event) ) {
+            if( app->event.type == sfEvtClosed || (app->event.type == sfEvtKeyPressed && app->event.key.code == sfKeyEscape) ) {
+                sfRenderWindow_close(app->renderWindow);
             }
         }
 
-        sfRenderWindow_clear(App, sfBlue);
+        sfRenderWindow_clear(app->renderWindow, sfBlue);
 
         memset(buffer, 0, sizeof buffer);
         readlen = read(app->sockfd, buffer, sizeof buffer);
@@ -304,14 +305,14 @@ void run_sfml(struct application *app) {
         fprintf(file, "%i\n", pk1000.counts);
 
 
-        sfRenderWindow_display(App);
+        sfRenderWindow_display(app->renderWindow);
     }
 }
 
 int main(int argc, char **argv) {
     struct application app;
     argc == 1 ? usage() : init_application(&app, argc, argv);
-    init_sfml();
+    init_sfml(&app);
 
     app.filename = argc <= optind ? "-" : argv[optind];
     if(strcmp(app.filename, "-") == 0) {
@@ -328,8 +329,6 @@ int main(int argc, char **argv) {
         connect_pk1000(&app);
     }
     run_sfml(&app);
-
-
 
     /* cleanup */
     if(file != stdout) {
