@@ -7,6 +7,8 @@
 
 #include <SFML/Window.h>
 #include <SFML/Graphics/Types.h>
+#include <sys/time.h>
+#include <tgmath.h>
 
 struct application {
     int num_samples_terminate;
@@ -27,7 +29,25 @@ struct application {
 
 void init_application(struct application *app, int argc, char **argv);
 
-char getTime(char *str) {
+void *getTime(char *str) {/*
+    char buffer[26];
+    int millisec;
+    struct tm* tm_info;
+    struct timeval tv;
+
+    gettimeofday(&tv, NULL);
+
+    millisec = lrint(tv.tv_usec/1000.0); // Round to nearest millisec
+    if (millisec>=1000) { // Allow for rounding up to nearest second
+        millisec -=1000;
+        tv.tv_sec++;
+    }
+
+    tm_info = localtime(&tv.tv_sec);
+
+    str = malloc(sizeof(buffer));
+    strftime(str, 26, "%Y:%m:%d %H:%M:%S", tm_info);
+*/
     time_t time_now;
     struct tm *cal_time;
 

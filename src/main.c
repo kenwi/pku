@@ -16,6 +16,8 @@
 #include "pk1000.h"
 #include "sfml.h"
 
+#include <time.h>
+
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
 pthread_t receiver_thread;
@@ -104,7 +106,7 @@ void init_application(struct application *app, int argc, char **argv) {
     app->sockfd = 0;
     app->port = 8080;
     app->host = "192.168.0.19";
-    app->filename = "-";
+    app->filename = argc <= optind ? "-" : argv[optind];
     app->print_warnings = 0;
 
     int opt;
@@ -148,7 +150,6 @@ void init_application(struct application *app, int argc, char **argv) {
 int main(int argc, char **argv) {
     struct application app;
     argc == 1 ? usage() : init_application(&app, argc, argv), init_sfml(&app);
-    app.filename = argc <= optind ? "-" : argv[optind];
 
     if(strcmp(app.filename, "-") == 0) {
         file = stdout;
