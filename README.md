@@ -27,10 +27,10 @@ pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.
 
 Usage:	pku [-options] filename
 	[-c connects with default settings]
-	[-r print sample hex]
 	[-i print sample data]
+	[-x print sample data as hex]
 	[-n collect n samples and terminate]
-	[-v verbose output]
+	[-w output warnings]
 	[-h host (default: 192.168.0.19)]
 	[-p port (default: 8080)]
 	filename (default: '-' dumps samples to stdout)
