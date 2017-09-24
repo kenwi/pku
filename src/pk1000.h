@@ -1,19 +1,7 @@
 //
 // Created by kenwi on 18.09.17.
 //
-
-#ifndef PKU_PK1000_H
-#define PKU_PK1000_H
-
-#define BUFF_SIZE 1024
-
-#pragma pack(1)
-
-#include <stdint.h>
-#include <stdlib.h>
-#include "main.h"
-
-/*  BYTES               FLAG            NUM
+/*  BYTES               FLAG            INDEX
 int8_t buffer[] = {
         0x37, 0x38, // Frame header     0 1
         0x00,       // Tag ID           2
@@ -53,6 +41,17 @@ int8_t buffer[] = {
         0x34,       // Counter          49
         0x27, 0x28  // Frame footer     50 51
 };*/
+
+#ifndef PKU_PK1000_H
+#define PKU_PK1000_H
+
+#define BUFF_SIZE 1024
+
+#pragma pack(1)
+
+#include <stdint.h>
+#include <stdlib.h>
+#include "main.h"
 
 typedef struct {
     int8_t id;
