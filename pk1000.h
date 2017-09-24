@@ -10,6 +10,8 @@
 #pragma pack(1)
 
 #include <stdint.h>
+#include <stdlib.h>
+#include "main.h"
 
 /*  BYTES               FLAG            NUM
 int8_t buffer[] = {
@@ -79,5 +81,75 @@ typedef struct {
     uint16_t frame_header;
     uint16_t frame_footer;
 } pk1000_setup_t;
+
+
+//int connect_pk1000(struct application *app);
+
+int16_t to_int16(int8_t a, int8_t b) {
+    return ((a & 0xff) << 8) | (b & 0xff);
+}
+
+pk1000_t make_pk1000(int8_t buffer[]) {
+    pk1000_t pk1000;
+    pk1000.frame_header = to_int16(buffer[0], buffer[1]);
+    pk1000.tag.id = buffer[3];//(buffer[3] & 0xff) << 8;
+    pk1000.tag.x = to_int16(buffer[3], buffer[4]);
+    pk1000.tag.y = to_int16(buffer[5], buffer[6]);
+    pk1000.tag.z = to_int16(buffer[7], buffer[8]);
+
+    /* Refactor this
+    for(int i = 0; i<4; i++) {
+        pk1000.anchors[i].id = buffer[9+3*i];
+        pk1000.anchors[i].distance = to_int16(buffer[10+3*i], buffer[10+3*i+1]);
+        pk1000.anchors[i].x = to_int16(buffer[22+6*i], buffer[23+6*i]);
+        pk1000.anchors[i].y = to_int16(buffer[24+6*i], buffer[25+6*i]);
+        pk1000.anchors[i].z = to_int16(buffer[26+6*i], buffer[27+6*i]);
+    }*/
+
+    pk1000.anchors[0].id = buffer[9];//(buffer[9] & 0xff) << 8;
+    pk1000.anchors[0].distance = to_int16(buffer[10], buffer[11]);
+    pk1000.anchors[0].x = to_int16(buffer[22], buffer[23]);
+    pk1000.anchors[0].y = to_int16(buffer[24], buffer[25]);
+    pk1000.anchors[0].z = to_int16(buffer[26], buffer[27]);
+
+    pk1000.anchors[1].id = buffer[12];//(buffer[12] & 0xff) << 8;
+    pk1000.anchors[1].distance = to_int16(buffer[13], buffer[14]);
+    pk1000.anchors[1].x = to_int16(buffer[29], buffer[30]);
+    pk1000.anchors[1].y = to_int16(buffer[31], buffer[32]);
+    pk1000.anchors[1].z = to_int16(buffer[33], buffer[34]);
+
+    pk1000.anchors[2].id = buffer[15];//(buffer[15] & 0xff) << 8;
+    pk1000.anchors[2].distance = to_int16(buffer[16], buffer[17]);
+    pk1000.anchors[2].x = to_int16(buffer[36], buffer[37]);
+    pk1000.anchors[2].y = to_int16(buffer[38], buffer[39]);
+    pk1000.anchors[2].z = to_int16(buffer[40], buffer[41]);
+
+    pk1000.anchors[3].id = buffer[18];//(buffer[18] & 0xff) << 8;
+    pk1000.anchors[3].distance = to_int16(buffer[19], buffer[20]);
+    pk1000.anchors[3].x = to_int16(buffer[43], buffer[44]);
+    pk1000.anchors[3].y = to_int16(buffer[45], buffer[46]);
+    pk1000.anchors[3].z = to_int16(buffer[47], buffer[48]);
+
+    pk1000.counts = buffer[49];//(buffer[49] & 0xff) << 8;
+    pk1000.frame_footer = to_int16(buffer[50], buffer[51]);
+    return pk1000;
+}
+
+int connect_pk1000(struct application *app) {
+    app->sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(app->port);
+    serv_addr.sin_addr.s_addr = inet_addr(app->host);
+
+    //fprintf(file, "Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
+
+    //connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
+    //pthread_create(&receiver_thread, NULL, receiver, app);//(void*)&sockfd);
+    //console(app->sockfd);
+
+
+    return app->sockfd;
+}
 
 #endif //PKU_PK1000_H

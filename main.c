@@ -14,102 +14,12 @@
 #include <SFML/OpenGL.h>
 
 #include "pk1000.h"
+#include "sfml.h"
 
 pthread_cond_t console_cv;
 pthread_mutex_t console_cv_lock;
 pthread_t receiver_thread;
 FILE *file;
-
-struct application {
-    int num_samples_terminate;
-    int connect_to_pk1000;
-    int print_raw_sample;
-    int port;
-    int sockfd;
-    int print_warnings;
-    int print_sample_data;
-
-    char *host;
-    char *filename;
-    sfEvent event;
-    sfRenderWindow* renderWindow;
-};
-
-void usage();
-char getTime(char *str);
-void *receiver(void *sfd);
-void console(int sockfd);
-void init_application(struct application *app, int argc, char **argv);
-int connect_pk1000(struct application *app);
-void init_sfml(struct application *ap);
-void run_sfml(struct application *app);
-
-int16_t to_int16(int8_t a, int8_t b) {
-    return ((a & 0xff) << 8) | (b & 0xff);
-}
-
-pk1000_t make_pk1000(int8_t buffer[]) {
-    pk1000_t pk1000;
-    pk1000.frame_header = to_int16(buffer[0], buffer[1]);
-    pk1000.tag.id = buffer[3];//(buffer[3] & 0xff) << 8;
-    pk1000.tag.x = to_int16(buffer[3], buffer[4]);
-    pk1000.tag.y = to_int16(buffer[5], buffer[6]);
-    pk1000.tag.z = to_int16(buffer[7], buffer[8]);
-
-    /* Refactor this
-    for(int i = 0; i<4; i++) {
-        pk1000.anchors[i].id = buffer[9+3*i];
-        pk1000.anchors[i].distance = to_int16(buffer[10+3*i], buffer[10+3*i+1]);
-        pk1000.anchors[i].x = to_int16(buffer[22+6*i], buffer[23+6*i]);
-        pk1000.anchors[i].y = to_int16(buffer[24+6*i], buffer[25+6*i]);
-        pk1000.anchors[i].z = to_int16(buffer[26+6*i], buffer[27+6*i]);
-    }*/
-
-    pk1000.anchors[0].id = buffer[9];//(buffer[9] & 0xff) << 8;
-    pk1000.anchors[0].distance = to_int16(buffer[10], buffer[11]);
-    pk1000.anchors[0].x = to_int16(buffer[22], buffer[23]);
-    pk1000.anchors[0].y = to_int16(buffer[24], buffer[25]);
-    pk1000.anchors[0].z = to_int16(buffer[26], buffer[27]);
-
-    pk1000.anchors[1].id = buffer[12];//(buffer[12] & 0xff) << 8;
-    pk1000.anchors[1].distance = to_int16(buffer[13], buffer[14]);
-    pk1000.anchors[1].x = to_int16(buffer[29], buffer[30]);
-    pk1000.anchors[1].y = to_int16(buffer[31], buffer[32]);
-    pk1000.anchors[1].z = to_int16(buffer[33], buffer[34]);
-
-    pk1000.anchors[2].id = buffer[15];//(buffer[15] & 0xff) << 8;
-    pk1000.anchors[2].distance = to_int16(buffer[16], buffer[17]);
-    pk1000.anchors[2].x = to_int16(buffer[36], buffer[37]);
-    pk1000.anchors[2].y = to_int16(buffer[38], buffer[39]);
-    pk1000.anchors[2].z = to_int16(buffer[40], buffer[41]);
-
-    pk1000.anchors[3].id = buffer[18];//(buffer[18] & 0xff) << 8;
-    pk1000.anchors[3].distance = to_int16(buffer[19], buffer[20]);
-    pk1000.anchors[3].x = to_int16(buffer[43], buffer[44]);
-    pk1000.anchors[3].y = to_int16(buffer[45], buffer[46]);
-    pk1000.anchors[3].z = to_int16(buffer[47], buffer[48]);
-
-    pk1000.counts = buffer[49];//(buffer[49] & 0xff) << 8;
-    pk1000.frame_footer = to_int16(buffer[50], buffer[51]);
-    return pk1000;
-}
-/*
-position_t make_position(int8_t bytes[]) {
-    position_t position;
-    position.id = (bytes[0] & 0xff) << 8;
-    position.x = to_int(bytes[1], bytes[2]);
-    position.y = to_int(bytes[3], bytes[4]);
-    position.z = to_int(bytes[5], bytes[6]);
-    return position;
-}
-
-distance_t make_distance(int8_t bytes[]) {
-    distance_t distance;
-    distance.id = bytes[0];
-    distance.distance = to_int16(bytes[1], bytes[2]);
-    return distance;
-}
-*/
 
 void usage() {
     printf("pkunwrap, a data receiver and unpacker for the IR-UWB PK-1000 system.\n\n"
@@ -124,15 +34,6 @@ void usage() {
             "\tfilename (default: '-' dumps samples to stdout)\n"
     );
     exit(EXIT_FAILURE);
-}
-
-char getTime(char *str) {
-    time_t time_now;
-    struct tm *cal_time;
-
-    time_now = time(NULL);
-    cal_time = localtime(&time_now);
-    strftime(str, 50, "%Y-%m-%d, %H:%M:%S", cal_time);
 }
 
 void *receiver(void *sfd) {
@@ -194,41 +95,7 @@ void *receiver(void *sfd) {
     }
 }
 
-void console(int sockfd) {
-    char buffer[BUFF_SIZE];
-    memset(buffer, 0, sizeof buffer);
 
-    while(1) {
-        fgets(buffer, sizeof buffer, stdin);
-        buffer[strlen(buffer)-1] = '\0';
-
-        if(strcmp(buffer, "") == 0)
-            continue;
-
-        if(strncmp(buffer, "exit", 4) == 0) {
-            pthread_mutex_destroy(&console_cv_lock);
-            pthread_cond_destroy(&console_cv);
-            _exit(EXIT_SUCCESS);
-        }
-    }
-}
-
-int connect_pk1000(struct application *app) {
-    app->sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(app->port);
-    serv_addr.sin_addr.s_addr = inet_addr(app->host);
-
-    //fprintf(file, "Connecting to PK-1000 system host: %s, port: %i\n", app->host, app->port);
-
-    connect(app->sockfd, (struct sockaddr*)&serv_addr, sizeof serv_addr);
-    //pthread_create(&receiver_thread, NULL, receiver, app);//(void*)&sockfd);
-    //console(app->sockfd);
-
-
-    return app->sockfd;
-}
 
 void init_application(struct application *app, int argc, char **argv) {
     app->num_samples_terminate = 0;
@@ -278,43 +145,11 @@ void init_application(struct application *app, int argc, char **argv) {
     }
 }
 
-
-void init_sfml(struct application *app) {
-    const int width = 700, height = 500;
-
-    sfVideoMode mode = {width, height, 32};
-    app->renderWindow = sfRenderWindow_create(mode, "pku", sfClose, NULL);
-}
-
-void run_sfml(struct application *app) {
-    int8_t buffer[BUFF_SIZE] = {0};
-    ssize_t readlen;
-
-    while(sfRenderWindow_isOpen(app->renderWindow)) {
-        while( sfRenderWindow_pollEvent(app->renderWindow, &app->event) ) {
-            if( app->event.type == sfEvtClosed || (app->event.type == sfEvtKeyPressed && app->event.key.code == sfKeyEscape) ) {
-                sfRenderWindow_close(app->renderWindow);
-            }
-        }
-
-        sfRenderWindow_clear(app->renderWindow, sfBlue);
-
-        memset(buffer, 0, sizeof buffer);
-        readlen = read(app->sockfd, buffer, sizeof buffer);
-        pk1000_t pk1000 = make_pk1000(buffer);
-        fprintf(file, "%i\n", pk1000.counts);
-
-
-        sfRenderWindow_display(app->renderWindow);
-    }
-}
-
 int main(int argc, char **argv) {
     struct application app;
-    argc == 1 ? usage() : init_application(&app, argc, argv);
-    init_sfml(&app);
-
+    argc == 1 ? usage() : init_application(&app, argc, argv), init_sfml(&app);
     app.filename = argc <= optind ? "-" : argv[optind];
+
     if(strcmp(app.filename, "-") == 0) {
         file = stdout;
     } else {
@@ -327,8 +162,9 @@ int main(int argc, char **argv) {
 
     if(app.connect_to_pk1000) {
         connect_pk1000(&app);
+        run_sfml(&app);
     }
-    run_sfml(&app);
+
 
     /* cleanup */
     if(file != stdout) {

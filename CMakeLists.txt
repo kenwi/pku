@@ -3,6 +3,6 @@ project(pku)
 
 set(MAKE_C_STANDARD 99)
 
-set(SOURCE_FILES main.c)
+set(SOURCE_FILES main.c pk1000.h main.h sfml.h)
 add_executable(pku ${SOURCE_FILES})
 target_link_libraries(pku pthread csfml-graphics csfml-window csfml-system)
